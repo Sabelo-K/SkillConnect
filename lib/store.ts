@@ -44,6 +44,7 @@ function toJob(row: any): JobRequest {
     commissionRate: Number(row.commission_rate ?? 10),
     commissionAmount: row.commission_amount ?? undefined,
     commissionStatus: row.commission_status,
+    photoUrl: row.photo_url ?? undefined,
   };
 }
 
@@ -145,6 +146,7 @@ export async function addJob(
       status: job.matchedWorkerId ? "matched" : "pending",
       commission_rate: 10,
       commission_status: "none",
+      photo_url: job.photoUrl ?? "",
     })
     .select()
     .single();

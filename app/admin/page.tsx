@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Worker, JobRequest } from "@/lib/types";
 import {
   Users, ClipboardList, MapPin, Phone, Star, CheckCircle, Clock,
   X, Eye, IdCard, Briefcase, CircleDollarSign, TrendingUp, AlertCircle,
-  MessageCircle, ToggleLeft, ToggleRight, ClipboardCheck,
+  MessageCircle, ToggleLeft, ToggleRight, ClipboardCheck, LogOut,
 } from "lucide-react";
 
 type Tab = "workers" | "jobs" | "commission";
@@ -188,6 +189,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [completingJob, setCompletingJob] = useState<JobRequest | null>(null);
+  const router = useRouter();
 
   const refreshData = useCallback(() => {
     return Promise.all([
@@ -226,6 +228,19 @@ export default function AdminPage() {
       `📍 Area: ${job.area} – ${job.ward}\n` +
       `📝 Details: ${job.description}\n\n` +
       `Please confirm you can attend by replying to this message. ✅`
+    );
+    return `https://wa.me/${phone}?text=${msg}`;
+  };
+
+  // Build a WhatsApp URL to notify the client that a worker has been matched
+  const buildClientNotifyUrl = (job: JobRequest, worker: Worker) => {
+    const phone = job.clientPhone.replace(/\s+/g, "").replace(/^\+/, "");
+    const msg = encodeURIComponent(
+      `Hi ${job.clientName} 👋\n\nGreat news! We've found a worker for your SkillConnect request.\n\n` +
+      `🔧 Trade: ${job.trade}\n` +
+      `👷 Worker: ${worker.name}\n` +
+      `📞 Contact: ${worker.phone}\n\n` +
+      `Please contact them directly to arrange a time. Thank you for using SkillConnect! 🙏`
     );
     return `https://wa.me/${phone}?text=${msg}`;
   };
@@ -273,9 +288,20 @@ export default function AdminPage() {
         />
       )}
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-1">Admin Dashboard</h1>
-        <p className="text-gray-500">Manage workers, jobs and commission for SkillConnect.</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">Admin Dashboard</h1>
+          <p className="text-gray-500">Manage workers, jobs and commission for SkillConnect.</p>
+        </div>
+        <button
+          onClick={async () => {
+            await fetch("/api/admin/logout", { method: "POST" });
+            router.push("/admin/login");
+          }}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 border border-gray-200 px-3 py-2 rounded-xl transition-colors"
+        >
+          <LogOut className="w-4 h-4" /> Sign out
+        </button>
       </div>
 
       {/* Summary cards */}
@@ -353,6 +379,11 @@ export default function AdminPage() {
                     </td>
                     <td className="px-4 py-3 text-gray-500 hidden lg:table-cell max-w-xs">
                       <p className="truncate">{j.description}</p>
+                      {j.photoUrl && (
+                        <a href={j.photoUrl} target="_blank" rel="noopener noreferrer">
+                          <img src={j.photoUrl} alt="Job photo" className="mt-1 w-12 h-12 object-cover rounded-lg border border-gray-100 hover:opacity-80" />
+                        </a>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${statusColor[j.status]}`}>{j.status}</span>
@@ -360,14 +391,24 @@ export default function AdminPage() {
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1.5">
                         {j.status === "matched" && worker && (
-                          <a
-                            href={buildWhatsAppUrl(j, worker)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs bg-green-500 text-white px-2.5 py-1.5 rounded-lg hover:bg-green-600 font-medium w-fit"
-                          >
-                            <MessageCircle className="w-3 h-3" /> Notify Worker
-                          </a>
+                          <>
+                            <a
+                              href={buildWhatsAppUrl(j, worker)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-xs bg-green-500 text-white px-2.5 py-1.5 rounded-lg hover:bg-green-600 font-medium w-fit"
+                            >
+                              <MessageCircle className="w-3 h-3" /> Notify Worker
+                            </a>
+                            <a
+                              href={buildClientNotifyUrl(j, worker)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-xs bg-blue-500 text-white px-2.5 py-1.5 rounded-lg hover:bg-blue-600 font-medium w-fit"
+                            >
+                              <MessageCircle className="w-3 h-3" /> Notify Client
+                            </a>
+                          </>
                         )}
                         {j.status !== "completed" ? (
                           <button

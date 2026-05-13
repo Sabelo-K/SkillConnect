@@ -1,9 +1,31 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Search, CheckCircle, Phone, MapPin, Star, ArrowLeft } from "lucide-react";
+import { Search, CheckCircle, Phone, MapPin, Star, ArrowLeft, Camera } from "lucide-react";
 import Link from "next/link";
 import { TRADES } from "@/lib/store";
 import { Worker } from "@/lib/types";
+
+async function compressImage(file: File, maxWidth: number, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 
 interface NominatimResult {
@@ -135,6 +157,8 @@ export default function FindWorkerPage() {
     description: "",
   });
   const [streetAddress, setStreetAddress] = useState("");
+  const [jobPhoto, setJobPhoto] = useState("");
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ job: { id: string; status: string }; matchedWorker: Worker | null } | null>(null);
   const [error, setError] = useState("");
@@ -150,7 +174,7 @@ export default function FindWorkerPage() {
       const res = await fetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, description }),
+        body: JSON.stringify({ ...form, description, photoUrl: jobPhoto }),
       });
       const data = await res.json();
       setResult(data);
@@ -310,6 +334,46 @@ export default function FindWorkerPage() {
             placeholder="e.g. I have a burst pipe under the kitchen sink. Water is leaking onto the floor."
             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Photo of the problem (optional)</label>
+          <div
+            onClick={() => photoInputRef.current?.click()}
+            className="relative border-2 border-dashed border-gray-200 rounded-xl p-4 cursor-pointer hover:border-orange-400 transition-colors group"
+          >
+            {jobPhoto ? (
+              <div className="flex items-center gap-4">
+                <img src={jobPhoto} alt="Job photo" className="w-20 h-20 object-cover rounded-xl border border-gray-100" />
+                <div>
+                  <p className="text-sm font-medium text-green-600">Photo added ✓</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Click to change</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 text-gray-400 group-hover:text-orange-500 transition-colors">
+                <div className="p-2 bg-gray-50 rounded-xl group-hover:bg-orange-50 transition-colors">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Add a photo</p>
+                  <p className="text-xs text-gray-400">Help the worker understand the problem</p>
+                </div>
+              </div>
+            )}
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const compressed = await compressImage(file, 800, 0.8);
+                setJobPhoto(compressed);
+              }}
+            />
+          </div>
         </div>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}

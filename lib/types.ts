@@ -56,4 +56,5 @@ export interface JobRequest {
   commissionRate: number;     // percentage, e.g. 10
   commissionAmount?: number;  // jobValue * commissionRate / 100
   commissionStatus: "none" | "awaiting" | "paid";
+  photoUrl?: string;
 }

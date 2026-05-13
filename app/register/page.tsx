@@ -5,7 +5,6 @@ import Link from "next/link";
 import { TRADES } from "@/lib/store";
 import { Worker } from "@/lib/types";
 
-const WARDS = ["Ward 1", "Ward 2", "Ward 3", "Ward 4", "Ward 5", "Ward 6", "Ward 7", "Ward 8"];
 
 // Compress an image file to a base64 JPEG, capped at maxWidth pixels
 async function compressImage(file: File, maxWidth: number, quality = 0.8): Promise<string> {
@@ -275,15 +274,13 @@ export default function RegisterPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Ward *</label>
-            <select
+            <input
               required
               value={form.ward}
               onChange={(e) => setForm({ ...form, ward: e.target.value })}
+              placeholder="e.g. Ward 4"
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-            >
-              <option value="">Select your ward...</option>
-              {WARDS.map((w) => <option key={w} value={w}>{w}</option>)}
-            </select>
+            />
           </div>
         </div>
 

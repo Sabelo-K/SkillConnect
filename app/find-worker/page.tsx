@@ -1,11 +1,130 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, CheckCircle, Phone, MapPin, Star, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { TRADES } from "@/lib/store";
 import { Worker } from "@/lib/types";
 
 const WARDS = ["Ward 1", "Ward 2", "Ward 3", "Ward 4", "Ward 5", "Ward 6", "Ward 7", "Ward 8"];
+
+interface NominatimResult {
+  place_id: number;
+  display_name: string;
+  address: {
+    road?: string;
+    suburb?: string;
+    quarter?: string;
+    neighbourhood?: string;
+    city_district?: string;
+    city?: string;
+    town?: string;
+  };
+}
+
+function AddressAutocomplete({
+  value,
+  onChange,
+  onSelect,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSelect: (display: string, suburb: string) => void;
+}) {
+  const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (timer.current) clearTimeout(timer.current);
+    if (value.length < 3) { setSuggestions([]); setOpen(false); return; }
+    timer.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(value)}&format=json&addressdetails=1&countrycodes=za&limit=6`,
+          { headers: { "Accept-Language": "en" } }
+        );
+        const data: NominatimResult[] = await res.json();
+        setSuggestions(data);
+        setOpen(data.length > 0);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 400);
+    return () => { if (timer.current) clearTimeout(timer.current); };
+  }, [value]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function handlePick(result: NominatimResult) {
+    const suburb =
+      result.address.suburb ||
+      result.address.quarter ||
+      result.address.neighbourhood ||
+      result.address.city_district ||
+      result.address.town ||
+      result.address.city ||
+      "";
+    // Trim the display name to the first 3 parts for brevity
+    const short = result.display_name.split(",").slice(0, 3).join(",").trim();
+    onSelect(short, suburb);
+    setOpen(false);
+    setSuggestions([]);
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => suggestions.length > 0 && setOpen(true)}
+          placeholder="e.g. 12 Main Road, Chatsworth"
+          autoComplete="off"
+          className="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+        />
+        {loading && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 animate-pulse">
+            Searching...
+          </span>
+        )}
+      </div>
+      {open && suggestions.length > 0 && (
+        <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          {suggestions.map((s) => (
+            <li key={s.place_id}>
+              <button
+                type="button"
+                onMouseDown={() => handlePick(s)}
+                className="w-full text-left px-4 py-3 text-sm hover:bg-orange-50 border-b border-gray-50 last:border-0 leading-snug"
+              >
+                <span className="font-medium text-gray-800">
+                  {s.display_name.split(",")[0]}
+                </span>
+                <span className="text-gray-400 text-xs block truncate">
+                  {s.display_name.split(",").slice(1, 4).join(",")}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export default function FindWorkerPage() {
   const [form, setForm] = useState({
@@ -16,6 +135,7 @@ export default function FindWorkerPage() {
     area: "Chatsworth",
     description: "",
   });
+  const [streetAddress, setStreetAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ job: { id: string; status: string }; matchedWorker: Worker | null } | null>(null);
   const [error, setError] = useState("");
@@ -25,10 +145,13 @@ export default function FindWorkerPage() {
     setSubmitting(true);
     setError("");
     try {
+      const description = streetAddress
+        ? `Address: ${streetAddress}\n\n${form.description}`
+        : form.description;
       const res = await fetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, description }),
       });
       const data = await res.json();
       setResult(data);
@@ -136,6 +259,19 @@ export default function FindWorkerPage() {
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Street address</label>
+          <AddressAutocomplete
+            value={streetAddress}
+            onChange={setStreetAddress}
+            onSelect={(display, suburb) => {
+              setStreetAddress(display);
+              if (suburb) setForm((f) => ({ ...f, area: suburb }));
+            }}
+          />
+          <p className="text-xs text-gray-400 mt-1">Start typing to search — click a result to fill in automatically.</p>
         </div>
 
         <div>

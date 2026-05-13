@@ -1,11 +1,112 @@
 "use client";
-import { useState } from "react";
-import { CheckCircle, ArrowLeft, HardHat } from "lucide-react";
+import { useState, useRef } from "react";
+import { CheckCircle, ArrowLeft, HardHat, Camera, IdCard, Upload } from "lucide-react";
 import Link from "next/link";
 import { TRADES } from "@/lib/store";
 import { Worker } from "@/lib/types";
 
 const WARDS = ["Ward 1", "Ward 2", "Ward 3", "Ward 4", "Ward 5", "Ward 6", "Ward 7", "Ward 8"];
+
+// Compress an image file to a base64 JPEG, capped at maxWidth pixels
+async function compressImage(file: File, maxWidth: number, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas not supported"));
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+interface ImageUploadProps {
+  label: string;
+  hint: string;
+  icon: React.ReactNode;
+  preview: string;
+  accept: string;
+  onFile: (base64: string) => void;
+}
+
+function ImageUpload({ label, hint, icon, preview, accept, onFile }: ImageUploadProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState("");
+
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setError("File is too large. Please use an image under 10MB.");
+      return;
+    }
+    setError("");
+    try {
+      // Profile selfie → 400px wide; ID document → 800px wide
+      const maxWidth = accept.includes("image") ? (label.toLowerCase().includes("selfie") ? 400 : 800) : 800;
+      const compressed = await compressImage(file, maxWidth, 0.82);
+      onFile(compressed);
+    } catch {
+      setError("Could not read the image. Please try another file.");
+    }
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label} *</label>
+      <div
+        onClick={() => inputRef.current?.click()}
+        className="relative border-2 border-dashed border-gray-200 rounded-2xl p-4 cursor-pointer hover:border-orange-400 transition-colors group"
+      >
+        {preview ? (
+          <div className="flex items-center gap-4">
+            <img
+              src={preview}
+              alt="preview"
+              className="w-20 h-20 object-cover rounded-xl border border-gray-100"
+            />
+            <div>
+              <p className="text-sm font-medium text-green-600">Uploaded ✓</p>
+              <p className="text-xs text-gray-400 mt-0.5">Click to change</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2 py-4 text-gray-400 group-hover:text-orange-500 transition-colors">
+            <div className="p-3 bg-gray-50 rounded-xl group-hover:bg-orange-50 transition-colors">
+              {icon}
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium">Click to upload</p>
+              <p className="text-xs text-gray-400">{hint}</p>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+              <Upload className="w-3 h-3" /> JPG, PNG or PDF
+            </div>
+          </div>
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={handleChange}
+        />
+      </div>
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </div>
+  );
+}
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
@@ -17,20 +118,25 @@ export default function RegisterPage() {
     yearsExperience: "",
     bio: "",
   });
+  const [selfie, setSelfie] = useState("");
+  const [idDocument, setIdDocument] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [registered, setRegistered] = useState<Worker | null>(null);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selfie) { setError("Please upload a photo of yourself."); return; }
+    if (!idDocument) { setError("Please upload a copy of your ID."); return; }
     setSubmitting(true);
     setError("");
     try {
       const res = await fetch("/api/workers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, photoUrl: selfie, idDocumentUrl: idDocument }),
       });
+      if (!res.ok) throw new Error("Server error");
       const data = await res.json();
       setRegistered(data);
     } catch {
@@ -47,15 +153,15 @@ export default function RegisterPage() {
           <CheckCircle className="w-14 h-14 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">You&apos;re registered!</h2>
           <p className="text-gray-500 mb-6">
-            Welcome to SkillConnect, <strong>{registered.name}</strong>. Your profile is now live.
-            Clients in your area will be able to find and contact you.
+            Welcome to SkillConnect, <strong>{registered.name}</strong>. Your profile is now live and
+            our team will verify your ID shortly.
           </p>
           <div className="bg-gray-50 rounded-2xl p-4 text-left mb-6">
             <div className="flex items-center gap-3">
               <img
                 src={registered.photoUrl}
                 alt={registered.name}
-                className="w-12 h-12 rounded-full bg-gray-200"
+                className="w-14 h-14 rounded-full object-cover border border-gray-200"
               />
               <div>
                 <p className="font-semibold text-gray-900">{registered.name}</p>
@@ -91,12 +197,13 @@ export default function RegisterPage() {
           <h1 className="text-3xl font-bold text-gray-900">Register as a worker</h1>
         </div>
         <p className="text-gray-500">
-          No certificate required — just show us your trade and your work.
-          Registration takes about 2 minutes.
+          No formal certificate required. We just need a selfie, your ID, and details about your work.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 space-y-5">
+
+        {/* Personal details */}
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2 sm:col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">Full name *</label>
@@ -120,6 +227,27 @@ export default function RegisterPage() {
           </div>
         </div>
 
+        {/* Photo uploads */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <ImageUpload
+            label="Selfie (profile photo)"
+            hint="A clear photo of your face"
+            icon={<Camera className="w-6 h-6" />}
+            preview={selfie}
+            accept="image/*"
+            onFile={setSelfie}
+          />
+          <ImageUpload
+            label="Copy of your ID"
+            hint="SA ID book, smart card or passport"
+            icon={<IdCard className="w-6 h-6" />}
+            preview={idDocument}
+            accept="image/*,application/pdf"
+            onFile={setIdDocument}
+          />
+        </div>
+
+        {/* Trade */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Trade / Skill *</label>
           <select
@@ -129,12 +257,11 @@ export default function RegisterPage() {
             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
             <option value="">Select your trade...</option>
-            {TRADES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
+            {TRADES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
 
+        {/* Location */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Area *</label>
@@ -155,13 +282,12 @@ export default function RegisterPage() {
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
             >
               <option value="">Select your ward...</option>
-              {WARDS.map((w) => (
-                <option key={w} value={w}>{w}</option>
-              ))}
+              {WARDS.map((w) => <option key={w} value={w}>{w}</option>)}
             </select>
           </div>
         </div>
 
+        {/* Experience */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Years of experience *</label>
           <input
@@ -176,6 +302,7 @@ export default function RegisterPage() {
           />
         </div>
 
+        {/* Bio */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Tell us about your work *</label>
           <textarea
@@ -189,8 +316,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="bg-orange-50 rounded-xl p-4 text-sm text-orange-700">
-          <strong>No certificate needed.</strong> After registering, our team will contact you
-          via WhatsApp to verify your details and photos of your work.
+          <strong>Privacy note:</strong> Your ID document is only visible to the SkillConnect admin team for verification purposes. It will never be shared with clients.
         </div>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}

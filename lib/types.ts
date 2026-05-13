@@ -19,7 +19,8 @@ export interface Worker {
   area: string;
   yearsExperience: number;
   bio: string;
-  photoUrl: string;
+  photoUrl: string;       // selfie — used as profile picture
+  idDocumentUrl: string;  // copy of ID document
   workPhotos: string[];
   rating: number;
   reviewCount: number;

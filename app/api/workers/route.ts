@@ -27,7 +27,8 @@ export async function POST(request: NextRequest) {
     area: body.area,
     yearsExperience: Number(body.yearsExperience),
     bio: body.bio,
-    photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(body.name)}`,
+    photoUrl: body.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(body.name)}`,
+    idDocumentUrl: body.idDocumentUrl || "",
     workPhotos: [],
     available: true,
   });

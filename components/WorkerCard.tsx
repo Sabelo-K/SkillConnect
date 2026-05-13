@@ -4,8 +4,8 @@ import { Worker } from "@/lib/types";
 
 const tierColors: Record<Worker["tier"], string> = {
   "New": "bg-gray-100 text-gray-600",
-  "Verified": "bg-blue-100 text-blue-700",
-  "Top Rated": "bg-orange-100 text-orange-700",
+  "Verified": "bg-[#fffbea] text-[#b8860b]",
+  "Top Rated": "bg-[#e8f5ef] text-[#007A4D]",
 };
 
 export default function WorkerCard({ worker }: { worker: Worker }) {
@@ -25,7 +25,7 @@ export default function WorkerCard({ worker }: { worker: Worker }) {
                 {worker.tier}
               </span>
               {worker.available && (
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-[#e8f5ef] text-[#007A4D]">
                   Available
                 </span>
               )}

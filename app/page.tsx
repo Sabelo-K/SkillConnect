@@ -140,14 +140,14 @@ export default function Home() {
             </div>
 
             {/* For workers */}
-            <div className="bg-gray-50 rounded-3xl p-8">
-              <h3 className="text-lg font-bold text-gray-700 mb-6 flex items-center gap-2">
+            <div className="bg-[#f0f7f4] rounded-3xl p-8">
+              <h3 className="text-lg font-bold text-[#007A4D] mb-6 flex items-center gap-2">
                 <HardHat className="w-5 h-5" /> For skilled workers
               </h3>
               <div className="space-y-6">
                 {workerSteps.map(({ step, title, desc }) => (
                   <div key={step} className="flex gap-4">
-                    <div className="w-8 h-8 rounded-full bg-gray-700 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-[#007A4D] text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
                       {step}
                     </div>
                     <div>
@@ -159,7 +159,7 @@ export default function Home() {
               </div>
               <Link
                 href="/register"
-                className="mt-8 inline-flex items-center gap-2 bg-gray-800 text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-gray-900 transition-colors"
+                className="mt-8 inline-flex items-center gap-2 bg-[#007A4D] text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-[#005c39] transition-colors"
               >
                 Register now <ArrowRight className="w-4 h-4" />
               </Link>
@@ -177,21 +177,24 @@ export default function Home() {
               icon: MapPin,
               title: "Locality-first matching",
               desc: "Workers from your own ward are always prioritised. Money stays in the community.",
+              bg: "bg-[#f0f7f4]", fg: "text-[#007A4D]",
             },
             {
               icon: Shield,
               title: "Verified profiles",
               desc: "Every worker is verified with photos of their past work and proof of local residence.",
+              bg: "bg-[#fffbea]", fg: "text-[#b8860b]",
             },
             {
               icon: Star,
               title: "Transparent ratings",
               desc: "Real reviews from your neighbours. You know who you're letting into your home.",
+              bg: "bg-orange-50", fg: "text-orange-600",
             },
-          ].map(({ icon: Icon, title, desc }) => (
+          ].map(({ icon: Icon, title, desc, bg, fg }) => (
             <div key={title} className="bg-white rounded-2xl border border-gray-100 p-6 flex gap-4">
-              <div className="p-3 bg-orange-50 rounded-xl h-fit">
-                <Icon className="w-5 h-5 text-orange-600" />
+              <div className={`p-3 ${bg} rounded-xl h-fit`}>
+                <Icon className={`w-5 h-5 ${fg}`} />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900 mb-1">{title}</h3>

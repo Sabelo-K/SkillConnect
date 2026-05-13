@@ -48,7 +48,7 @@ function WorkerModal({ worker, onClose }: { worker: Worker; onClose: () => void 
           </div>
           <div className="flex gap-2 flex-wrap">
             <span className={`text-xs px-3 py-1 rounded-full font-medium ${worker.available ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{worker.available ? "Available" : "Unavailable"}</span>
-            <span className={`text-xs px-3 py-1 rounded-full font-medium ${worker.tier === "Top Rated" ? "bg-orange-100 text-orange-700" : worker.tier === "Verified" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>{worker.tier}</span>
+            <span className={`text-xs px-3 py-1 rounded-full font-medium ${worker.tier === "Top Rated" ? "bg-[#e8f5ef] text-[#007A4D]" : worker.tier === "Verified" ? "bg-[#fffbea] text-[#b8860b]" : "bg-gray-100 text-gray-600"}`}>{worker.tier}</span>
             <span className="text-xs px-3 py-1 rounded-full font-medium bg-gray-100 text-gray-500">Registered {worker.registeredAt}</span>
           </div>
           <div>
@@ -266,14 +266,14 @@ export default function AdminPage() {
   const totalOutstanding = completedJobs.filter((j) => j.commissionStatus === "awaiting").reduce((s, j) => s + (j.commissionAmount ?? 0), 0);
 
   const statusColor: Record<JobRequest["status"], string> = {
-    pending: "bg-yellow-100 text-yellow-700",
-    matched: "bg-blue-100 text-blue-700",
-    completed: "bg-green-100 text-green-700",
+    pending: "bg-[#fffbea] text-[#b8860b]",
+    matched: "bg-[#eef1fb] text-[#002395]",
+    completed: "bg-[#e8f5ef] text-[#007A4D]",
   };
   const commissionColor: Record<JobRequest["commissionStatus"], string> = {
     none: "bg-gray-100 text-gray-400",
-    awaiting: "bg-orange-100 text-orange-700",
-    paid: "bg-green-100 text-green-700",
+    awaiting: "bg-[#fffbea] text-[#b8860b]",
+    paid: "bg-[#e8f5ef] text-[#007A4D]",
   };
 
   return (
@@ -558,7 +558,7 @@ export default function AdminPage() {
                     {w.reviewCount > 0 ? <span className="flex items-center gap-1"><Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />{w.rating.toFixed(1)} ({w.reviewCount})</span> : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${w.tier === "Top Rated" ? "bg-orange-100 text-orange-700" : w.tier === "Verified" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>{w.tier}</span>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${w.tier === "Top Rated" ? "bg-[#e8f5ef] text-[#007A4D]" : w.tier === "Verified" ? "bg-[#fffbea] text-[#b8860b]" : "bg-gray-100 text-gray-600"}`}>{w.tier}</span>
                   </td>
                   <td className="px-4 py-3">
                     {w.idDocumentUrl ? <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">Uploaded</span> : <span className="text-xs bg-gray-100 text-gray-400 px-2 py-1 rounded-full">None</span>}

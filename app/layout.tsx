@@ -16,6 +16,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${geist.className} bg-gray-50 min-h-screen flex flex-col`}>
+        {/* South African flag stripe */}
+        <div className="flex h-1.5 w-full">
+          <div className="flex-1 bg-[#007A4D]" />
+          <div className="flex-1 bg-[#FFB612]" />
+          <div className="flex-1 bg-[#DE3831]" />
+          <div className="flex-1 bg-[#002395]" />
+          <div className="flex-1 bg-black" />
+          <div className="flex-1 bg-white border-b border-gray-100" />
+        </div>
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

@@ -2,7 +2,7 @@ import { Wrench, Phone } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-900 text-gray-300 mt-auto">
+    <footer className="bg-[#00311e] text-gray-300 mt-auto">
       <div className="max-w-6xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
         <div>
           <div className="flex items-center gap-2 font-bold text-xl text-orange-500 mb-2">
@@ -38,7 +38,7 @@ export default function Footer() {
           </p>
         </div>
       </div>
-      <div className="border-t border-gray-800 text-center py-4 text-xs text-gray-500">
+      <div className="border-t border-white/10 text-center py-4 text-xs text-gray-400">
         © {new Date().getFullYear()} SkillConnect · Building local economies, one ward at a time.
       </div>
     </footer>

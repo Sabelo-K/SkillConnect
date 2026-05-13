@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const trade = searchParams.get("trade");
   const ward = searchParams.get("ward");
 
-  let workers = getWorkers();
+  let workers = await getWorkers();
   if (trade && trade !== "All") {
     workers = workers.filter((w) => w.trade === trade);
   }
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const worker = addWorker({
+  const worker = await addWorker({
     name: body.name,
     phone: body.phone,
     trade: body.trade as Trade,

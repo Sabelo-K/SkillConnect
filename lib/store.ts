@@ -1,194 +1,273 @@
+import { supabase } from "./supabase";
 import { Worker, JobRequest, Review, Trade } from "./types";
 
-const DEFAULT_COMMISSION_RATE = 10; // 10%
+// ─── helpers ────────────────────────────────────────────────────────────────
 
-// In-memory store — resets on server restart (MVP phase)
-const store: {
-  workers: Worker[];
-  jobs: JobRequest[];
-  reviews: Review[];
-} = {
-  reviews: [],
-  workers: [
-    { id: "w1", name: "Thabo Nkosi", phone: "+27 82 345 6789", trade: "Plumber", ward: "Ward 4", area: "Chatsworth", yearsExperience: 8, bio: "Experienced plumber specialising in burst pipes, geyser installations, and full bathroom plumbing. Fast, reliable and clean work.", photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=thabo", idDocumentUrl: "", workPhotos: [], rating: 4.8, reviewCount: 34, tier: "Top Rated", jobsCompleted: 47, available: true, registeredAt: "2024-11-01" },
-    { id: "w2", name: "Praveen Pillay", phone: "+27 73 456 7890", trade: "Electrician", ward: "Ward 4", area: "Chatsworth", yearsExperience: 12, bio: "Qualified electrician with over a decade of experience in domestic and light commercial electrical work. COC certificates available.", photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=praveen", idDocumentUrl: "", workPhotos: [], rating: 4.9, reviewCount: 52, tier: "Top Rated", jobsCompleted: 63, available: true, registeredAt: "2024-10-15" },
-    { id: "w3", name: "Sipho Dlamini", phone: "+27 61 567 8901", trade: "Carpenter", ward: "Ward 5", area: "Chatsworth", yearsExperience: 6, bio: "Skilled carpenter for custom built-in cupboards, wooden decks, doors, and general woodwork. Quality craftsmanship guaranteed.", photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=sipho", idDocumentUrl: "", workPhotos: [], rating: 4.7, reviewCount: 21, tier: "Verified", jobsCompleted: 29, available: true, registeredAt: "2024-11-20" },
-    { id: "w4", name: "Ravi Govender", phone: "+27 84 678 9012", trade: "Painter", ward: "Ward 4", area: "Chatsworth", yearsExperience: 10, bio: "Professional painter offering interior and exterior painting services. Neat, on time, and affordable. Free quotes available.", photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=ravi", idDocumentUrl: "", workPhotos: [], rating: 4.6, reviewCount: 18, tier: "Verified", jobsCompleted: 35, available: false, registeredAt: "2024-12-01" },
-    { id: "w5", name: "Lungelo Zulu", phone: "+27 79 789 0123", trade: "Tiler", ward: "Ward 6", area: "Chatsworth", yearsExperience: 5, bio: "Expert tiler for floors, walls, and bathrooms. Specialises in large format tiles and complex patterns.", photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=lungelo", idDocumentUrl: "", workPhotos: [], rating: 4.5, reviewCount: 14, tier: "Verified", jobsCompleted: 22, available: true, registeredAt: "2025-01-10" },
-    { id: "w6", name: "Anil Maharaj", phone: "+27 66 890 1234", trade: "Builder", ward: "Ward 4", area: "Chatsworth", yearsExperience: 15, bio: "General builder with 15 years of experience in extensions, renovations, boundary walls, and new builds. Licensed and insured.", photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=anil", idDocumentUrl: "", workPhotos: [], rating: 4.9, reviewCount: 61, tier: "Top Rated", jobsCompleted: 78, available: true, registeredAt: "2024-09-05" },
-  ],
-  jobs: [
-    {
-      id: "j1",
-      clientName: "Mrs Naidoo",
-      clientPhone: "+27 82 111 2222",
-      trade: "Plumber",
-      ward: "Ward 4",
-      area: "Chatsworth",
-      description: "Burst pipe under the kitchen sink. Water is leaking onto the floor.",
-      status: "completed",
-      matchedWorkerId: "w1",
-      createdAt: "2025-05-10",
-      completedAt: "2025-05-10",
-      jobValue: 850,
-      commissionRate: DEFAULT_COMMISSION_RATE,
-      commissionAmount: 85,
-      commissionStatus: "paid",
-    },
-    {
-      id: "j2",
-      clientName: "Mr Sithole",
-      clientPhone: "+27 73 333 4444",
-      trade: "Painter",
-      ward: "Ward 5",
-      area: "Chatsworth",
-      description: "Need to paint 3 bedrooms and the lounge. Interior walls only.",
-      status: "matched",
-      matchedWorkerId: "w4",
-      createdAt: "2025-05-12",
-      commissionRate: DEFAULT_COMMISSION_RATE,
-      commissionStatus: "none",
-    },
-    {
-      id: "j3",
-      clientName: "Ms Govender",
-      clientPhone: "+27 84 222 3333",
-      trade: "Electrician",
-      ward: "Ward 4",
-      area: "Chatsworth",
-      description: "Tripping circuit breaker in the DB board. Happens every evening.",
-      status: "completed",
-      matchedWorkerId: "w2",
-      createdAt: "2025-05-08",
-      completedAt: "2025-05-09",
-      jobValue: 1200,
-      commissionRate: DEFAULT_COMMISSION_RATE,
-      commissionAmount: 120,
-      commissionStatus: "awaiting",
-    },
-  ],
-};
-
-export function getWorkers(): Worker[] {
-  return store.workers;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toWorker(row: any): Worker {
+  return {
+    id: row.id,
+    name: row.name,
+    phone: row.phone,
+    trade: row.trade as Trade,
+    ward: row.ward,
+    area: row.area,
+    yearsExperience: row.years_experience,
+    bio: row.bio,
+    photoUrl: row.photo_url ?? "",
+    idDocumentUrl: row.id_document_url ?? "",
+    workPhotos: row.work_photos ?? [],
+    rating: Number(row.rating ?? 0),
+    reviewCount: row.review_count ?? 0,
+    tier: row.tier,
+    jobsCompleted: row.jobs_completed ?? 0,
+    available: row.available,
+    registeredAt: row.registered_at,
+  };
 }
 
-export function getWorkerById(id: string): Worker | undefined {
-  return store.workers.find((w) => w.id === id);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toJob(row: any): JobRequest {
+  return {
+    id: row.id,
+    clientName: row.client_name,
+    clientPhone: row.client_phone,
+    trade: row.trade as Trade,
+    ward: row.ward,
+    area: row.area,
+    description: row.description,
+    status: row.status,
+    matchedWorkerId: row.matched_worker_id ?? undefined,
+    createdAt: row.created_at,
+    completedAt: row.completed_at ?? undefined,
+    jobValue: row.job_value ?? undefined,
+    commissionRate: Number(row.commission_rate ?? 10),
+    commissionAmount: row.commission_amount ?? undefined,
+    commissionStatus: row.commission_status,
+  };
 }
 
-export function addWorker(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toReview(row: any): Review {
+  return {
+    id: row.id,
+    jobId: row.job_id,
+    workerId: row.worker_id,
+    rating: row.rating,
+    comment: row.comment ?? "",
+    reviewerName: row.reviewer_name,
+    createdAt: row.created_at,
+  };
+}
+
+// ─── workers ────────────────────────────────────────────────────────────────
+
+export async function getWorkers(): Promise<Worker[]> {
+  const { data, error } = await supabase.from("workers").select("*").order("rating", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(toWorker);
+}
+
+export async function getWorkerById(id: string): Promise<Worker | undefined> {
+  const { data, error } = await supabase.from("workers").select("*").eq("id", id).single();
+  if (error) return undefined;
+  return toWorker(data);
+}
+
+export async function addWorker(
   worker: Omit<Worker, "id" | "rating" | "reviewCount" | "tier" | "jobsCompleted" | "registeredAt">
-): Worker {
-  const newWorker: Worker = {
-    ...worker,
-    id: `w${Date.now()}`,
-    rating: 0,
-    reviewCount: 0,
-    tier: "New",
-    jobsCompleted: 0,
-    registeredAt: new Date().toISOString().split("T")[0],
-  };
-  store.workers.push(newWorker);
-  return newWorker;
+): Promise<Worker> {
+  const { data, error } = await supabase
+    .from("workers")
+    .insert({
+      name: worker.name,
+      phone: worker.phone,
+      trade: worker.trade,
+      ward: worker.ward,
+      area: worker.area,
+      years_experience: worker.yearsExperience,
+      bio: worker.bio,
+      photo_url: worker.photoUrl,
+      id_document_url: worker.idDocumentUrl,
+      work_photos: worker.workPhotos,
+      available: worker.available,
+      rating: 0,
+      review_count: 0,
+      tier: "New",
+      jobs_completed: 0,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return toWorker(data);
 }
 
-export function getJobs(): JobRequest[] {
-  return store.jobs;
+export async function toggleAvailability(workerId: string): Promise<Worker | null> {
+  const existing = await getWorkerById(workerId);
+  if (!existing) return null;
+  const { data, error } = await supabase
+    .from("workers")
+    .update({ available: !existing.available })
+    .eq("id", workerId)
+    .select()
+    .single();
+  if (error) throw error;
+  return toWorker(data);
 }
 
-export function addJob(
+// ─── jobs ────────────────────────────────────────────────────────────────────
+
+export async function getJobs(): Promise<JobRequest[]> {
+  const { data, error } = await supabase.from("jobs").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(toJob);
+}
+
+export async function getJobById(id: string): Promise<JobRequest | undefined> {
+  const { data, error } = await supabase.from("jobs").select("*").eq("id", id).single();
+  if (error) return undefined;
+  return toJob(data);
+}
+
+export async function addJob(
   job: Omit<JobRequest, "id" | "status" | "createdAt" | "commissionRate" | "commissionStatus">
-): JobRequest {
-  const newJob: JobRequest = {
-    ...job,
-    id: `j${Date.now()}`,
-    status: "pending",
-    createdAt: new Date().toISOString().split("T")[0],
-    commissionRate: DEFAULT_COMMISSION_RATE,
-    commissionStatus: "none",
-  };
-  store.jobs.push(newJob);
-  return newJob;
+): Promise<JobRequest> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .insert({
+      client_name: job.clientName,
+      client_phone: job.clientPhone,
+      trade: job.trade,
+      ward: job.ward,
+      area: job.area,
+      description: job.description,
+      matched_worker_id: job.matchedWorkerId ?? null,
+      status: job.matchedWorkerId ? "matched" : "pending",
+      commission_rate: 10,
+      commission_status: "none",
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return toJob(data);
 }
 
-export function completeJob(
+export async function completeJob(
   jobId: string,
   jobValue: number,
   commissionRate: number
-): JobRequest | null {
-  const job = store.jobs.find((j) => j.id === jobId);
-  if (!job) return null;
+): Promise<JobRequest | null> {
   const commissionAmount = Math.round(jobValue * (commissionRate / 100));
-  job.status = "completed";
-  job.completedAt = new Date().toISOString().split("T")[0];
-  job.jobValue = jobValue;
-  job.commissionRate = commissionRate;
-  job.commissionAmount = commissionAmount;
-  job.commissionStatus = "awaiting";
-  // Increment worker's job count
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({
+      status: "completed",
+      completed_at: new Date().toISOString().split("T")[0],
+      job_value: jobValue,
+      commission_rate: commissionRate,
+      commission_amount: commissionAmount,
+      commission_status: "awaiting",
+    })
+    .eq("id", jobId)
+    .select()
+    .single();
+  if (error) throw error;
+  const job = toJob(data);
+  // Increment worker's jobs_completed
   if (job.matchedWorkerId) {
-    const worker = store.workers.find((w) => w.id === job.matchedWorkerId);
-    if (worker) worker.jobsCompleted += 1;
+    const worker = await getWorkerById(job.matchedWorkerId);
+    if (worker) {
+      await supabase
+        .from("workers")
+        .update({ jobs_completed: worker.jobsCompleted + 1 })
+        .eq("id", job.matchedWorkerId);
+    }
   }
   return job;
 }
 
-export function markCommissionPaid(jobId: string): JobRequest | null {
-  const job = store.jobs.find((j) => j.id === jobId);
-  if (!job) return null;
-  job.commissionStatus = "paid";
-  return job;
+export async function markCommissionPaid(jobId: string): Promise<JobRequest | null> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ commission_status: "paid" })
+    .eq("id", jobId)
+    .select()
+    .single();
+  if (error) throw error;
+  return toJob(data);
 }
 
-export function matchWorkerForJob(job: JobRequest): Worker | undefined {
-  const sameWard = store.workers.filter(
-    (w) => w.trade === job.trade && w.ward === job.ward && w.available
-  );
-  if (sameWard.length > 0) return sameWard.sort((a, b) => b.rating - a.rating)[0];
-  const sameArea = store.workers.filter(
-    (w) => w.trade === job.trade && w.area === job.area && w.available
-  );
-  return sameArea.sort((a, b) => b.rating - a.rating)[0];
+export async function matchWorkerForJob(job: JobRequest): Promise<Worker | undefined> {
+  // Try same ward first
+  const { data: sameWard } = await supabase
+    .from("workers")
+    .select("*")
+    .eq("trade", job.trade)
+    .eq("ward", job.ward)
+    .eq("available", true)
+    .order("rating", { ascending: false })
+    .limit(1);
+  if (sameWard && sameWard.length > 0) return toWorker(sameWard[0]);
+
+  // Fall back to same area
+  const { data: sameArea } = await supabase
+    .from("workers")
+    .select("*")
+    .eq("trade", job.trade)
+    .eq("area", job.area)
+    .eq("available", true)
+    .order("rating", { ascending: false })
+    .limit(1);
+  if (sameArea && sameArea.length > 0) return toWorker(sameArea[0]);
+
+  return undefined;
 }
 
-export function toggleAvailability(workerId: string): Worker | null {
-  const worker = store.workers.find((w) => w.id === workerId);
-  if (!worker) return null;
-  worker.available = !worker.available;
-  return worker;
+// ─── reviews ─────────────────────────────────────────────────────────────────
+
+export async function getReviews(workerId?: string): Promise<Review[]> {
+  let query = supabase.from("reviews").select("*").order("created_at", { ascending: false });
+  if (workerId) query = query.eq("worker_id", workerId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map(toReview);
 }
 
-export function getReviews(workerId?: string): Review[] {
-  if (workerId) return store.reviews.filter((r) => r.workerId === workerId);
-  return store.reviews;
-}
-
-export function addReview(
+export async function addReview(
   review: Omit<Review, "id" | "createdAt">
-): Review {
-  const newReview: Review = {
-    ...review,
-    id: `r${Date.now()}`,
-    createdAt: new Date().toISOString().split("T")[0],
-  };
-  store.reviews.push(newReview);
-  // Recalculate worker's rating
-  const workerReviews = store.reviews.filter((r) => r.workerId === review.workerId);
-  const worker = store.workers.find((w) => w.id === review.workerId);
-  if (worker) {
-    worker.reviewCount = workerReviews.length;
-    worker.rating = Math.round((workerReviews.reduce((s, r) => s + r.rating, 0) / workerReviews.length) * 10) / 10;
-    // Promote tier based on reviews
-    if (worker.reviewCount >= 10 && worker.rating >= 4.5) worker.tier = "Top Rated";
-    else if (worker.reviewCount >= 3) worker.tier = "Verified";
+): Promise<Review> {
+  const { data, error } = await supabase
+    .from("reviews")
+    .insert({
+      job_id: review.jobId,
+      worker_id: review.workerId,
+      rating: review.rating,
+      comment: review.comment,
+      reviewer_name: review.reviewerName,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+
+  // Recalculate worker rating + tier
+  const { data: workerReviews } = await supabase
+    .from("reviews")
+    .select("rating")
+    .eq("worker_id", review.workerId);
+  if (workerReviews && workerReviews.length > 0) {
+    const count = workerReviews.length;
+    const avg = Math.round((workerReviews.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10;
+    const tier = count >= 10 && avg >= 4.5 ? "Top Rated" : count >= 3 ? "Verified" : "New";
+    await supabase
+      .from("workers")
+      .update({ rating: avg, review_count: count, tier })
+      .eq("id", review.workerId);
   }
-  return newReview;
+
+  return toReview(data);
 }
 
-export function getJobById(id: string): JobRequest | undefined {
-  return store.jobs.find((j) => j.id === id);
-}
+// ─── constants ───────────────────────────────────────────────────────────────
 
 export const TRADES: Trade[] = [
   "Plumber", "Electrician", "Carpenter", "Painter",

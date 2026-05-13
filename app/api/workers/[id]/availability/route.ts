@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const worker = toggleAvailability(id);
+  const worker = await toggleAvailability(id);
   if (!worker) return NextResponse.json({ error: "Worker not found" }, { status: 404 });
   return NextResponse.json(worker);
 }

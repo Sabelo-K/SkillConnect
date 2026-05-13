@@ -5,7 +5,6 @@ import Link from "next/link";
 import { TRADES } from "@/lib/store";
 import { Worker } from "@/lib/types";
 
-const WARDS = ["Ward 1", "Ward 2", "Ward 3", "Ward 4", "Ward 5", "Ward 6", "Ward 7", "Ward 8"];
 
 interface NominatimResult {
   place_id: number;
@@ -132,7 +131,7 @@ export default function FindWorkerPage() {
     clientPhone: "",
     trade: "",
     ward: "",
-    area: "Chatsworth",
+    area: "",
     description: "",
   });
   const [streetAddress, setStreetAddress] = useState("");
@@ -289,31 +288,16 @@ export default function FindWorkerPage() {
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Area *</label>
-            <input
-              required
-              value={form.area}
-              onChange={(e) => setForm({ ...form, area: e.target.value })}
-              placeholder="e.g. Chatsworth"
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ward *</label>
-            <select
-              required
-              value={form.ward}
-              onChange={(e) => setForm({ ...form, ward: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-            >
-              <option value="">Select ward...</option>
-              {WARDS.map((w) => (
-                <option key={w} value={w}>{w}</option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Area *</label>
+          <input
+            required
+            value={form.area}
+            onChange={(e) => setForm({ ...form, area: e.target.value })}
+            placeholder="e.g. Chatsworth"
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+          />
+          <p className="text-xs text-gray-400 mt-1">Auto-filled from your address, or type it in.</p>
         </div>
 
         <div>

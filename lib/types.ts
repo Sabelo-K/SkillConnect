@@ -30,6 +30,16 @@ export interface Worker {
   registeredAt: string;
 }
 
+export interface Review {
+  id: string;
+  jobId: string;
+  workerId: string;
+  rating: number;       // 1–5
+  comment: string;
+  reviewerName: string;
+  createdAt: string;
+}
+
 export interface JobRequest {
   id: string;
   clientName: string;

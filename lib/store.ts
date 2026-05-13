@@ -1,4 +1,4 @@
-import { Worker, JobRequest, Trade } from "./types";
+import { Worker, JobRequest, Review, Trade } from "./types";
 
 const DEFAULT_COMMISSION_RATE = 10; // 10%
 
@@ -6,7 +6,9 @@ const DEFAULT_COMMISSION_RATE = 10; // 10%
 const store: {
   workers: Worker[];
   jobs: JobRequest[];
+  reviews: Review[];
 } = {
+  reviews: [],
   workers: [
     { id: "w1", name: "Thabo Nkosi", phone: "+27 82 345 6789", trade: "Plumber", ward: "Ward 4", area: "Chatsworth", yearsExperience: 8, bio: "Experienced plumber specialising in burst pipes, geyser installations, and full bathroom plumbing. Fast, reliable and clean work.", photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=thabo", idDocumentUrl: "", workPhotos: [], rating: 4.8, reviewCount: 34, tier: "Top Rated", jobsCompleted: 47, available: true, registeredAt: "2024-11-01" },
     { id: "w2", name: "Praveen Pillay", phone: "+27 73 456 7890", trade: "Electrician", ward: "Ward 4", area: "Chatsworth", yearsExperience: 12, bio: "Qualified electrician with over a decade of experience in domestic and light commercial electrical work. COC certificates available.", photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=praveen", idDocumentUrl: "", workPhotos: [], rating: 4.9, reviewCount: 52, tier: "Top Rated", jobsCompleted: 63, available: true, registeredAt: "2024-10-15" },
@@ -148,6 +150,44 @@ export function matchWorkerForJob(job: JobRequest): Worker | undefined {
     (w) => w.trade === job.trade && w.area === job.area && w.available
   );
   return sameArea.sort((a, b) => b.rating - a.rating)[0];
+}
+
+export function toggleAvailability(workerId: string): Worker | null {
+  const worker = store.workers.find((w) => w.id === workerId);
+  if (!worker) return null;
+  worker.available = !worker.available;
+  return worker;
+}
+
+export function getReviews(workerId?: string): Review[] {
+  if (workerId) return store.reviews.filter((r) => r.workerId === workerId);
+  return store.reviews;
+}
+
+export function addReview(
+  review: Omit<Review, "id" | "createdAt">
+): Review {
+  const newReview: Review = {
+    ...review,
+    id: `r${Date.now()}`,
+    createdAt: new Date().toISOString().split("T")[0],
+  };
+  store.reviews.push(newReview);
+  // Recalculate worker's rating
+  const workerReviews = store.reviews.filter((r) => r.workerId === review.workerId);
+  const worker = store.workers.find((w) => w.id === review.workerId);
+  if (worker) {
+    worker.reviewCount = workerReviews.length;
+    worker.rating = Math.round((workerReviews.reduce((s, r) => s + r.rating, 0) / workerReviews.length) * 10) / 10;
+    // Promote tier based on reviews
+    if (worker.reviewCount >= 10 && worker.rating >= 4.5) worker.tier = "Top Rated";
+    else if (worker.reviewCount >= 3) worker.tier = "Verified";
+  }
+  return newReview;
+}
+
+export function getJobById(id: string): JobRequest | undefined {
+  return store.jobs.find((j) => j.id === id);
 }
 
 export const TRADES: Trade[] = [

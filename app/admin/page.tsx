@@ -4,6 +4,7 @@ import { Worker, JobRequest } from "@/lib/types";
 import {
   Users, ClipboardList, MapPin, Phone, Star, CheckCircle, Clock,
   X, Eye, IdCard, Briefcase, CircleDollarSign, TrendingUp, AlertCircle,
+  MessageCircle, ToggleLeft, ToggleRight, ClipboardCheck,
 } from "lucide-react";
 
 type Tab = "workers" | "jobs" | "commission";
@@ -209,6 +210,40 @@ export default function AdminPage() {
     await refreshData();
   };
 
+  const handleToggleAvailability = async (workerId: string) => {
+    await fetch(`/api/workers/${workerId}/availability`, { method: "POST" });
+    await refreshData();
+  };
+
+  // Build a WhatsApp click-to-send URL for notifying a worker about a matched job
+  const buildWhatsAppUrl = (job: JobRequest, worker: Worker) => {
+    const phone = worker.phone.replace(/\s+/g, "").replace(/^\+/, "");
+    const msg = encodeURIComponent(
+      `Hi ${worker.name} 👋\n\nYou have a new SkillConnect job!\n\n` +
+      `📋 Trade: ${job.trade}\n` +
+      `👤 Client: ${job.clientName}\n` +
+      `📞 Client phone: ${job.clientPhone}\n` +
+      `📍 Area: ${job.area} – ${job.ward}\n` +
+      `📝 Details: ${job.description}\n\n` +
+      `Please confirm you can attend by replying to this message. ✅`
+    );
+    return `https://wa.me/${phone}?text=${msg}`;
+  };
+
+  // Build a WhatsApp review request URL for clients
+  const buildReviewUrl = (job: JobRequest) => {
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+    const reviewLink = `${baseUrl}/review/${job.id}`;
+    const phone = job.clientPhone.replace(/\s+/g, "").replace(/^\+/, "");
+    const msg = encodeURIComponent(
+      `Hi ${job.clientName} 👋\n\nThank you for using SkillConnect!\n\n` +
+      `We hope you were happy with the work done. Please take a moment to rate your experience:\n\n` +
+      `${reviewLink}\n\n` +
+      `Your review helps other community members find trusted local workers. 🙏`
+    );
+    return `https://wa.me/${phone}?text=${msg}`;
+  };
+
   // Commission totals
   const completedJobs = jobs.filter((j) => j.status === "completed");
   const totalEarned = completedJobs.reduce((s, j) => s + (j.commissionAmount ?? 0), 0);
@@ -323,16 +358,35 @@ export default function AdminPage() {
                       <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${statusColor[j.status]}`}>{j.status}</span>
                     </td>
                     <td className="px-4 py-3">
-                      {j.status !== "completed" ? (
-                        <button
-                          onClick={() => setCompletingJob(j)}
-                          className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 font-medium"
-                        >
-                          Mark Complete
-                        </button>
-                      ) : (
-                        <span className="text-xs text-gray-400">Done · {j.completedAt}</span>
-                      )}
+                      <div className="flex flex-col gap-1.5">
+                        {j.status === "matched" && worker && (
+                          <a
+                            href={buildWhatsAppUrl(j, worker)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs bg-green-500 text-white px-2.5 py-1.5 rounded-lg hover:bg-green-600 font-medium w-fit"
+                          >
+                            <MessageCircle className="w-3 h-3" /> Notify Worker
+                          </a>
+                        )}
+                        {j.status !== "completed" ? (
+                          <button
+                            onClick={() => setCompletingJob(j)}
+                            className="flex items-center gap-1 text-xs bg-blue-600 text-white px-2.5 py-1.5 rounded-lg hover:bg-blue-700 font-medium w-fit"
+                          >
+                            <CheckCircle className="w-3 h-3" /> Mark Complete
+                          </button>
+                        ) : (
+                          <a
+                            href={buildReviewUrl(j)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs bg-orange-500 text-white px-2.5 py-1.5 rounded-lg hover:bg-orange-600 font-medium w-fit"
+                          >
+                            <ClipboardCheck className="w-3 h-3" /> Request Review
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -441,6 +495,7 @@ export default function AdminPage() {
                 <th className="px-4 py-3 text-left hidden md:table-cell">Rating</th>
                 <th className="px-4 py-3 text-left">Tier</th>
                 <th className="px-4 py-3 text-left">ID</th>
+                <th className="px-4 py-3 text-left">Available</th>
                 <th className="px-4 py-3 text-left">Profile</th>
               </tr>
             </thead>
@@ -466,6 +521,18 @@ export default function AdminPage() {
                   </td>
                   <td className="px-4 py-3">
                     {w.idDocumentUrl ? <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">Uploaded</span> : <span className="text-xs bg-gray-100 text-gray-400 px-2 py-1 rounded-full">None</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => handleToggleAvailability(w.id)}
+                      title={w.available ? "Click to mark unavailable" : "Click to mark available"}
+                      className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+                    >
+                      {w.available
+                        ? <><ToggleRight className="w-6 h-6 text-green-500" /><span className="text-green-600">On</span></>
+                        : <><ToggleLeft className="w-6 h-6 text-gray-400" /><span className="text-gray-400">Off</span></>
+                      }
+                    </button>
                   </td>
                   <td className="px-4 py-3">
                     <button onClick={() => setSelectedWorker(w)} className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 font-medium">

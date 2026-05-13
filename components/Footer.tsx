@@ -31,7 +31,7 @@ export default function Footer() {
           <h3 className="font-semibold text-white mb-3">Contact</h3>
           <div className="flex items-center gap-2 text-sm">
             <Phone className="w-4 h-4 text-orange-500" />
-            <span>+27 67 946 7770</span>
+            <span>076 488 0159</span>
           </div>
           <p className="text-sm text-gray-400 mt-2">
             WhatsApp or call us to get started.

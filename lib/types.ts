@@ -41,4 +41,9 @@ export interface JobRequest {
   status: "pending" | "matched" | "completed";
   matchedWorkerId?: string;
   createdAt: string;
+  completedAt?: string;
+  jobValue?: number;          // rand value of the job, entered by admin on completion
+  commissionRate: number;     // percentage, e.g. 10
+  commissionAmount?: number;  // jobValue * commissionRate / 100
+  commissionStatus: "none" | "awaiting" | "paid";
 }

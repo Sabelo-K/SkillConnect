@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Shield,
 } from "lucide-react";
+import LocationBadge from "@/components/LocationBadge";
 
 const trades = [
   { name: "Plumber", icon: Wrench, color: "bg-blue-50 text-blue-600" },
@@ -49,9 +50,7 @@ export default function Home() {
       {/* Hero */}
       <section className="bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 text-white">
         <div className="max-w-6xl mx-auto px-4 py-20 flex flex-col items-center text-center">
-          <span className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full mb-6">
-            📍 Now live in Chatsworth, Durban
-          </span>
+          <LocationBadge />
           <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-4">
             Local skills.<br />Local jobs.<br />Local money.
           </h1>

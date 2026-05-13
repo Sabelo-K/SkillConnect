@@ -47,13 +47,20 @@ function ImageUpload({ label, hint, icon, preview, accept, onFile }: ImageUpload
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      setError("File is too large. Please use an image under 10MB.");
+      setError("File is too large. Please use a file under 10MB.");
       return;
     }
     setError("");
     try {
-      // Profile selfie → 400px wide; ID document → 800px wide
-      const maxWidth = accept.includes("image") ? (label.toLowerCase().includes("selfie") ? 400 : 800) : 800;
+      // PDFs can't go through canvas — read directly as base64
+      if (file.type === "application/pdf") {
+        const reader = new FileReader();
+        reader.onload = (e) => onFile(e.target?.result as string);
+        reader.onerror = () => setError("Could not read the file. Please try another.");
+        reader.readAsDataURL(file);
+        return;
+      }
+      const maxWidth = label.toLowerCase().includes("selfie") ? 400 : 800;
       const compressed = await compressImage(file, maxWidth, 0.82);
       onFile(compressed);
     } catch {
@@ -70,11 +77,13 @@ function ImageUpload({ label, hint, icon, preview, accept, onFile }: ImageUpload
       >
         {preview ? (
           <div className="flex items-center gap-4">
-            <img
-              src={preview}
-              alt="preview"
-              className="w-20 h-20 object-cover rounded-xl border border-gray-100"
-            />
+            {preview.startsWith("data:application/pdf") ? (
+              <div className="w-20 h-20 flex items-center justify-center bg-red-50 rounded-xl border border-gray-100">
+                <span className="text-xs font-bold text-red-500">PDF</span>
+              </div>
+            ) : (
+              <img src={preview} alt="preview" className="w-20 h-20 object-cover rounded-xl border border-gray-100" />
+            )}
             <div>
               <p className="text-sm font-medium text-green-600">Uploaded ✓</p>
               <p className="text-xs text-gray-400 mt-0.5">Click to change</p>

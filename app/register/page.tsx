@@ -128,6 +128,7 @@ export default function RegisterPage() {
   });
   const [selfie, setSelfie] = useState("");
   const [idDocument, setIdDocument] = useState("");
+  const [popiaConsent, setPopiaConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [registered, setRegistered] = useState<Worker | null>(null);
   const [error, setError] = useState("");
@@ -136,6 +137,7 @@ export default function RegisterPage() {
     e.preventDefault();
     if (!selfie) { setError("Please upload a photo of yourself."); return; }
     if (!idDocument) { setError("Please upload a copy of your ID."); return; }
+    if (!popiaConsent) { setError("Please accept the data protection consent to continue."); return; }
     setSubmitting(true);
     setError("");
     try {
@@ -321,9 +323,21 @@ export default function RegisterPage() {
           />
         </div>
 
-        <div className="bg-orange-50 rounded-xl p-4 text-sm text-orange-700">
-          <strong>Privacy note:</strong> Your ID document is only visible to the SkillConnect admin team for verification purposes. It will never be shared with clients.
-        </div>
+        {/* POPIA consent */}
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={popiaConsent}
+            onChange={(e) => setPopiaConsent(e.target.checked)}
+            className="mt-0.5 w-4 h-4 accent-orange-600 flex-shrink-0"
+          />
+          <span className="text-sm text-gray-600 leading-relaxed">
+            I consent to SkillConnect collecting and storing my personal information (name, phone, photo,
+            ID document) for the purpose of verifying my profile and connecting me with clients, in
+            accordance with the{" "}
+            <a href="/privacy" target="_blank" className="text-orange-600 underline">POPIA Privacy Policy</a>.
+          </span>
+        </label>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
 

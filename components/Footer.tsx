@@ -23,6 +23,8 @@ export default function Footer() {
             <li><a href="/find-worker" className="hover:text-orange-400 transition-colors">Request a Worker</a></li>
             <li><a href="/workers" className="hover:text-orange-400 transition-colors">Browse Workers</a></li>
             <li><a href="/register" className="hover:text-orange-400 transition-colors">Register as Worker</a></li>
+            <li><a href="/impact" className="hover:text-orange-400 transition-colors">Our Impact</a></li>
+            <li><a href="/privacy" className="hover:text-orange-400 transition-colors">Privacy Policy</a></li>
             <li><a href="/admin" className="hover:text-orange-400 transition-colors">Admin Dashboard</a></li>
           </ul>
         </div>

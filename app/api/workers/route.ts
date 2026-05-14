@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const trade = searchParams.get("trade");
     const ward = searchParams.get("ward");
-    let workers = await getWorkers();
+    const includeAll = searchParams.get("all") === "1";
+    let workers = await getWorkers(includeAll);
     if (trade && trade !== "All") workers = workers.filter((w) => w.trade === trade);
     if (ward && ward !== "All") workers = workers.filter((w) => w.ward === ward);
     return NextResponse.json(workers);

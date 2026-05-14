@@ -22,6 +22,9 @@ export default function Navbar() {
           <Link href="/find-worker" className="hover:text-orange-600 transition-colors">
             Request a Job
           </Link>
+          <Link href="/impact" className="hover:text-orange-600 transition-colors">
+            Our Impact
+          </Link>
           <Link href="/admin" className="hover:text-orange-600 transition-colors">
             Admin
           </Link>
@@ -44,6 +47,7 @@ export default function Navbar() {
         <div className="md:hidden bg-white border-t px-4 py-3 flex flex-col gap-3 text-sm font-medium text-gray-700">
           <Link href="/workers" onClick={() => setOpen(false)}>Find Workers</Link>
           <Link href="/find-worker" onClick={() => setOpen(false)}>Request a Job</Link>
+          <Link href="/impact" onClick={() => setOpen(false)}>Our Impact</Link>
           <Link href="/admin" onClick={() => setOpen(false)}>Admin</Link>
           <Link
             href="/register"

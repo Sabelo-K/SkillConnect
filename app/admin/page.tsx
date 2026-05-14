@@ -5,10 +5,10 @@ import { Worker, JobRequest } from "@/lib/types";
 import {
   Users, ClipboardList, MapPin, Phone, Star, CheckCircle, Clock,
   X, Eye, IdCard, Briefcase, CircleDollarSign, TrendingUp, AlertCircle,
-  MessageCircle, ToggleLeft, ToggleRight, ClipboardCheck, LogOut,
+  MessageCircle, ToggleLeft, ToggleRight, ClipboardCheck, LogOut, UserCheck, UserX,
 } from "lucide-react";
 
-type Tab = "workers" | "jobs" | "commission";
+type Tab = "workers" | "jobs" | "commission" | "approvals";
 
 // ── Worker profile modal ─────────────────────────────────────────────────────
 function WorkerModal({ worker, onClose }: { worker: Worker; onClose: () => void }) {
@@ -151,12 +151,16 @@ export default function AdminPage() {
 
   const refreshData = useCallback(() =>
     Promise.all([
-      fetch("/api/workers").then((r) => r.json()),
+      fetch("/api/workers?all=1").then((r) => r.json()),
       fetch("/api/jobs").then((r) => r.json()),
     ]).then(([w, j]) => { setWorkers(w); setJobs(j); }), []);
 
   useEffect(() => { refreshData().finally(() => setLoading(false)); }, [refreshData]);
 
+  const handleWorkerStatus = async (workerId: string, status: "approved" | "rejected") => {
+    await fetch(`/api/workers/${workerId}/status`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
+    await refreshData();
+  };
   const handleMarkCommissionPaid = async (jobId: string) => { await fetch(`/api/jobs/${jobId}/commission`, { method: "POST" }); await refreshData(); };
   const handleCompleteJobDone = async () => { setCompletingJob(null); await refreshData(); };
   const handleToggleAvailability = async (workerId: string) => { await fetch(`/api/workers/${workerId}/availability`, { method: "POST" }); await refreshData(); };
@@ -177,6 +181,8 @@ export default function AdminPage() {
     return `https://wa.me/${phone}?text=${encodeURIComponent(`Hi ${job.clientName} 👋\n\nThank you for using SkillConnect! Please rate your experience:\n\n${reviewLink}\n\nYour review helps other community members. 🙏`)}`;
   };
 
+  const approvedWorkers = workers.filter((w) => w.status === "approved");
+  const pendingWorkers = workers.filter((w) => w.status === "pending");
   const completedJobs = jobs.filter((j) => j.status === "completed");
   const totalEarned = completedJobs.reduce((s, j) => s + (j.commissionAmount ?? 0), 0);
   const totalCollected = completedJobs.filter((j) => j.commissionStatus === "paid").reduce((s, j) => s + (j.commissionAmount ?? 0), 0);
@@ -207,7 +213,7 @@ export default function AdminPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
-          { icon: Users, color: "text-orange-500", value: workers.length, label: "Workers" },
+          { icon: Users, color: "text-orange-500", value: approvedWorkers.length, label: "Workers" },
           { icon: ClipboardList, color: "text-[#002395]", value: jobs.filter((j) => j.status !== "completed").length, label: "Active jobs" },
           { icon: CircleDollarSign, color: "text-[#007A4D]", value: `R ${totalCollected.toLocaleString()}`, label: "Collected" },
           { icon: AlertCircle, color: "text-orange-500", value: `R ${totalOutstanding.toLocaleString()}`, label: "Outstanding" },
@@ -221,12 +227,14 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-5">
-        {(["jobs", "commission", "workers"] as Tab[]).map((t) => (
+      <div className="flex border-b border-gray-200 mb-5 overflow-x-auto">
+        {(["jobs", "commission", "workers", "approvals"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 sm:flex-none px-3 sm:px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === t ? "border-orange-600 text-orange-600" : "border-transparent text-gray-500"}`}
+            className={`flex-1 sm:flex-none px-3 sm:px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap flex items-center justify-center gap-1.5 ${tab === t ? "border-orange-600 text-orange-600" : "border-transparent text-gray-500"}`}
           >
-            {t === "jobs" ? `Jobs (${jobs.length})` : t === "commission" ? "Commission" : `Workers (${workers.length})`}
+            {t === "jobs" ? `Jobs (${jobs.length})` : t === "commission" ? "Commission" : t === "workers" ? `Workers (${approvedWorkers.length})` : (
+              <span className="flex items-center gap-1.5">Approvals {pendingWorkers.length > 0 && <span className="bg-[#DE3831] text-white text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{pendingWorkers.length}</span>}</span>
+            )}
           </button>
         ))}
       </div>
@@ -396,13 +404,13 @@ export default function AdminPage() {
             </table>
           </div>
         </div>
-      ) : (
+      ) : tab === "workers" ? (
         /* ── Workers tab — cards on mobile, table on desktop ── */
         <>
           {/* Mobile cards */}
           <div className="space-y-3 sm:hidden">
-            {workers.length === 0 && <p className="text-center py-10 text-gray-400 text-sm">No workers yet.</p>}
-            {workers.map((w) => (
+            {approvedWorkers.length === 0 && <p className="text-center py-10 text-gray-400 text-sm">No approved workers yet.</p>}
+            {approvedWorkers.map((w) => (
               <div key={w.id} className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <img src={w.photoUrl} alt={w.name} className="w-12 h-12 rounded-full object-cover bg-gray-100 flex-shrink-0" />
@@ -449,7 +457,7 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {workers.map((w) => (
+                {approvedWorkers.map((w) => (
                   <tr key={w.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3"><div className="flex items-center gap-3"><img src={w.photoUrl} alt={w.name} className="w-10 h-10 rounded-full object-cover bg-gray-100 flex-shrink-0" /><div><p className="font-medium text-gray-900">{w.name}</p><p className="text-xs text-gray-400 flex items-center gap-1"><Phone className="w-3 h-3" />{w.phone}</p></div></div></td>
                     <td className="px-4 py-3 text-orange-600 font-medium">{w.trade}</td>
@@ -465,6 +473,62 @@ export default function AdminPage() {
             </table>
           </div>
         </>
+      ) : (
+        /* ── Approvals tab ── */
+        <div className="space-y-3">
+          {pendingWorkers.length === 0 && (
+            <div className="text-center py-16 text-gray-400">
+              <UserCheck className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm font-medium">No pending applications</p>
+              <p className="text-xs mt-1">New worker registrations will appear here for review.</p>
+            </div>
+          )}
+          {pendingWorkers.map((w) => (
+            <div key={w.id} className="bg-white rounded-2xl border border-orange-100 p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <img src={w.photoUrl} alt={w.name} className="w-14 h-14 rounded-full object-cover bg-gray-100 flex-shrink-0 border-2 border-orange-200" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-gray-900">{w.name}</p>
+                    <span className="text-xs px-2 py-0.5 bg-[#fffbea] text-[#b8860b] rounded-full font-medium">Pending Review</span>
+                  </div>
+                  <p className="text-sm text-orange-600 font-medium">{w.trade}</p>
+                  <a href={`tel:${w.phone}`} className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" />{w.phone}</a>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{w.area} · {w.ward}</span>
+                <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" />{w.yearsExperience} yrs experience</span>
+              </div>
+              <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3 leading-relaxed">{w.bio}</p>
+              {w.idDocumentUrl && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1.5 flex items-center gap-1"><IdCard className="w-3.5 h-3.5" /> ID Document</p>
+                  <div className="border border-gray-100 rounded-xl overflow-hidden">
+                    <img src={w.idDocumentUrl} alt="ID" className="w-full max-h-48 object-contain" />
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => handleWorkerStatus(w.id, "approved")}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-[#007A4D] text-white py-2.5 rounded-xl text-sm font-semibold"
+                >
+                  <UserCheck className="w-4 h-4" /> Approve
+                </button>
+                <button
+                  onClick={() => handleWorkerStatus(w.id, "rejected")}
+                  className="flex-1 flex items-center justify-center gap-1.5 border border-[#DE3831] text-[#DE3831] py-2.5 rounded-xl text-sm font-semibold"
+                >
+                  <UserX className="w-4 h-4" /> Reject
+                </button>
+                <button onClick={() => setSelectedWorker(w)} className="px-4 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium">
+                  <Eye className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

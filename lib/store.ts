@@ -23,6 +23,7 @@ function toWorker(row: any): Worker {
     jobsCompleted: row.jobs_completed ?? 0,
     available: row.available,
     registeredAt: row.registered_at,
+    status: row.status ?? "approved",
   };
 }
 
@@ -63,8 +64,10 @@ function toReview(row: any): Review {
 
 // ─── workers ────────────────────────────────────────────────────────────────
 
-export async function getWorkers(): Promise<Worker[]> {
-  const { data, error } = await supabase.from("workers").select("*").order("rating", { ascending: false });
+export async function getWorkers(includeAll = false): Promise<Worker[]> {
+  let query = supabase.from("workers").select("*").order("rating", { ascending: false });
+  if (!includeAll) query = query.eq("status", "approved");
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []).map(toWorker);
 }
@@ -76,7 +79,7 @@ export async function getWorkerById(id: string): Promise<Worker | undefined> {
 }
 
 export async function addWorker(
-  worker: Omit<Worker, "id" | "rating" | "reviewCount" | "tier" | "jobsCompleted" | "registeredAt">
+  worker: Omit<Worker, "id" | "rating" | "reviewCount" | "tier" | "jobsCompleted" | "registeredAt" | "status">
 ): Promise<Worker> {
   const { data, error } = await supabase
     .from("workers")
@@ -96,7 +99,19 @@ export async function addWorker(
       review_count: 0,
       tier: "New",
       jobs_completed: 0,
+      status: "pending",
     })
+    .select()
+    .single();
+  if (error) throw error;
+  return toWorker(data);
+}
+
+export async function setWorkerStatus(workerId: string, status: "approved" | "rejected"): Promise<Worker | null> {
+  const { data, error } = await supabase
+    .from("workers")
+    .update({ status })
+    .eq("id", workerId)
     .select()
     .single();
   if (error) throw error;
@@ -207,6 +222,7 @@ export async function matchWorkerForJob(job: JobRequest): Promise<Worker | undef
     .eq("trade", job.trade)
     .eq("ward", job.ward)
     .eq("available", true)
+    .eq("status", "approved")
     .order("rating", { ascending: false })
     .limit(1);
   if (sameWard && sameWard.length > 0) return toWorker(sameWard[0]);
@@ -218,6 +234,7 @@ export async function matchWorkerForJob(job: JobRequest): Promise<Worker | undef
     .eq("trade", job.trade)
     .eq("area", job.area)
     .eq("available", true)
+    .eq("status", "approved")
     .order("rating", { ascending: false })
     .limit(1);
   if (sameArea && sameArea.length > 0) return toWorker(sameArea[0]);

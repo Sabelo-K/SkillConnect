@@ -159,12 +159,14 @@ export default function FindWorkerPage() {
   const [streetAddress, setStreetAddress] = useState("");
   const [jobPhoto, setJobPhoto] = useState("");
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [popiaConsent, setPopiaConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ job: { id: string; status: string }; matchedWorker: Worker | null } | null>(null);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!popiaConsent) { setError("Please accept the privacy consent to continue."); return; }
     setSubmitting(true);
     setError("");
     try {
@@ -375,6 +377,21 @@ export default function FindWorkerPage() {
             />
           </div>
         </div>
+
+        {/* POPIA consent */}
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={popiaConsent}
+            onChange={(e) => setPopiaConsent(e.target.checked)}
+            className="mt-0.5 w-4 h-4 accent-orange-600 flex-shrink-0"
+          />
+          <span className="text-sm text-gray-600 leading-relaxed">
+            I consent to SkillConnect collecting my name and phone number to match me with a worker and
+            facilitate this job request, in accordance with the{" "}
+            <a href="/privacy" target="_blank" className="text-orange-600 underline">POPIA Privacy Policy</a>.
+          </span>
+        </label>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
 

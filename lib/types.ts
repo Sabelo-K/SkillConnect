@@ -28,6 +28,7 @@ export interface Worker {
   jobsCompleted: number;
   available: boolean;
   registeredAt: string;
+  status: "pending" | "approved" | "rejected";
 }
 
 export interface Review {

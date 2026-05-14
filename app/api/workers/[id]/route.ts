@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/adminAuth";
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const deny = requireAdmin(_request);
+  if (deny) return deny;
   try {
     const { id } = await params;
     const { error } = await supabase.from("workers").delete().eq("id", id);

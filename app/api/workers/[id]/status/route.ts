@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setWorkerStatus } from "@/lib/store";
+import { requireAdmin } from "@/lib/adminAuth";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const deny = requireAdmin(request);
+  if (deny) return deny;
   try {
     const { id } = await params;
     const { status } = await request.json();

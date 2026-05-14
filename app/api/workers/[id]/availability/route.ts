@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { toggleAvailability } from "@/lib/store";
+import { requireAdmin } from "@/lib/adminAuth";
 
 export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const deny = requireAdmin(_request);
+  if (deny) return deny;
   try {
     const { id } = await params;
     const worker = await toggleAvailability(id);

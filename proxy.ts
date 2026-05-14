@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isValidSession } from "@/lib/adminAuth";
 
-const ADMIN_PASSWORD = "SkillConnect2025!";
-
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
     const cookie = request.cookies.get("sc_admin");
-    if (cookie?.value !== ADMIN_PASSWORD) {
+    if (!isValidSession(cookie?.value)) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
   }

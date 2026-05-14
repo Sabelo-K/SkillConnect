@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveDispute } from "@/lib/store";
+import { requireAdmin } from "@/lib/adminAuth";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const deny = requireAdmin(req);
+  if (deny) return deny;
   try {
     const { id } = await params;
     const { resolution, outcome } = await req.json();

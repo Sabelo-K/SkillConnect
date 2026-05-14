@@ -33,6 +33,11 @@ select {
   -webkit-text-fill-color: #111827;
 }
 
+/* Smooth scrolling inside modals on iOS Safari */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,

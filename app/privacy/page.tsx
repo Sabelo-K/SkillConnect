@@ -34,7 +34,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-base font-bold text-gray-900 mb-2">1. Who we are (Responsible Party)</h2>
           <p>
-            <strong>SkillConnect</strong> operates as a locality-first labour marketplace based in Sweetwaters, Pietermaritzburg, Durban,
+            <strong>SkillConnect</strong> operates as a locality-first labour marketplace based in Sweetwaters, Pietermaritzburg,
             KwaZulu-Natal, South Africa. We are the Responsible Party as defined under POPIA.
           </p>
           <p className="mt-2">

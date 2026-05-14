@@ -36,7 +36,7 @@ async function getImpactData(): Promise<ImpactData> {
 
 export const metadata = {
   title: "Our Impact — SkillConnect",
-  description: "See how SkillConnect is building local economies in Sweetwaters, Pietermaritzburg, Durban by connecting skilled workers with community members.",
+  description: "See how SkillConnect is building local economies in Sweetwaters, Pietermaritzburg by connecting skilled workers with community members.",
 };
 
 export default async function ImpactPage() {
@@ -72,7 +72,7 @@ export default async function ImpactPage() {
         <div className="text-right text-xs text-gray-400">
           <p>Impact Report</p>
           <p>Generated: {generated}</p>
-          <p>Sweetwaters, Pietermaritzburg, Durban, KZN</p>
+          <p>Sweetwaters, Pietermaritzburg, KZN</p>
         </div>
       </div>
 
@@ -83,7 +83,7 @@ export default async function ImpactPage() {
             <Heart className="w-4 h-4 fill-white" /> Building local economies
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-4">
-            Our impact in<br />Sweetwaters, Pietermaritzburg, Durban
+            Our impact in<br />Sweetwaters, Pietermaritzburg
           </h1>
           <p className="text-lg text-green-100 max-w-2xl mx-auto">
             SkillConnect is keeping money in the community by connecting skilled local workers
@@ -94,7 +94,7 @@ export default async function ImpactPage() {
 
       {/* Print page title */}
       <div className="hidden print:block px-8 py-6">
-        <h1 className="text-3xl font-extrabold text-gray-900">Impact Report — Sweetwaters, Pietermaritzburg, Durban</h1>
+        <h1 className="text-3xl font-extrabold text-gray-900">Impact Report — Sweetwaters, Pietermaritzburg</h1>
         <p className="text-gray-500 mt-1 text-sm">SkillConnect is a locality-first labour marketplace connecting verified skilled workers with community members in Sweetwaters, Pietermaritzburg, KwaZulu-Natal.</p>
       </div>
 
@@ -170,7 +170,7 @@ export default async function ImpactPage() {
         <div className="flex gap-8 text-sm text-gray-600">
           <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-orange-500" /> +27 76 488 0159</span>
           <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-orange-500" /> skillconnect.cw@gmail.com</span>
-          <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-orange-500" /> Sweetwaters, Pietermaritzburg, Durban, KwaZulu-Natal</span>
+          <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-orange-500" /> Sweetwaters, Pietermaritzburg, KwaZulu-Natal</span>
         </div>
         <p className="text-xs text-gray-400 mt-2">For partnership enquiries visit: skillconnect.vercel.app/partner</p>
       </div>

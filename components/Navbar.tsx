@@ -25,6 +25,9 @@ export default function Navbar() {
           <Link href="/impact" className="hover:text-orange-600 transition-colors">
             Our Impact
           </Link>
+          <Link href="/partner" className="hover:text-orange-600 transition-colors">
+            Partner
+          </Link>
           <Link href="/admin" className="hover:text-orange-600 transition-colors">
             Admin
           </Link>
@@ -48,6 +51,7 @@ export default function Navbar() {
           <Link href="/workers" onClick={() => setOpen(false)}>Find Workers</Link>
           <Link href="/find-worker" onClick={() => setOpen(false)}>Request a Job</Link>
           <Link href="/impact" onClick={() => setOpen(false)}>Our Impact</Link>
+          <Link href="/partner" onClick={() => setOpen(false)}>Partner with Us</Link>
           <Link href="/admin" onClick={() => setOpen(false)}>Admin</Link>
           <Link
             href="/register"

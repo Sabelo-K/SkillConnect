@@ -5,10 +5,21 @@ import { Worker, JobRequest } from "@/lib/types";
 import {
   Users, ClipboardList, MapPin, Phone, Star, CheckCircle, Clock,
   X, Eye, IdCard, Briefcase, CircleDollarSign, TrendingUp, AlertCircle,
-  MessageCircle, ToggleLeft, ToggleRight, ClipboardCheck, LogOut, UserCheck, UserX,
+  MessageCircle, ToggleLeft, ToggleRight, ClipboardCheck, LogOut, UserCheck, UserX, Handshake,
 } from "lucide-react";
 
-type Tab = "workers" | "jobs" | "commission" | "approvals";
+type Tab = "workers" | "jobs" | "commission" | "approvals" | "partners";
+
+interface PartnerInquiry {
+  id: string;
+  name: string;
+  organisation: string;
+  email: string;
+  phone: string;
+  type: string;
+  message: string;
+  created_at: string;
+}
 
 // ── Worker profile modal ─────────────────────────────────────────────────────
 function WorkerModal({ worker, onClose }: { worker: Worker; onClose: () => void }) {
@@ -147,13 +158,15 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [completingJob, setCompletingJob] = useState<JobRequest | null>(null);
+  const [partners, setPartners] = useState<PartnerInquiry[]>([]);
   const router = useRouter();
 
   const refreshData = useCallback(() =>
     Promise.all([
       fetch("/api/workers?all=1").then((r) => r.json()),
       fetch("/api/jobs").then((r) => r.json()),
-    ]).then(([w, j]) => { setWorkers(w); setJobs(j); }), []);
+      fetch("/api/partner").then((r) => r.json()),
+    ]).then(([w, j, p]) => { setWorkers(w); setJobs(j); setPartners(Array.isArray(p) ? p : []); }), []);
 
   useEffect(() => { refreshData().finally(() => setLoading(false)); }, [refreshData]);
 
@@ -228,13 +241,16 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 mb-5 overflow-x-auto">
-        {(["jobs", "commission", "workers", "approvals"] as Tab[]).map((t) => (
+        {(["jobs", "commission", "workers", "approvals", "partners"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`flex-1 sm:flex-none px-3 sm:px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap flex items-center justify-center gap-1.5 ${tab === t ? "border-orange-600 text-orange-600" : "border-transparent text-gray-500"}`}
           >
-            {t === "jobs" ? `Jobs (${jobs.length})` : t === "commission" ? "Commission" : t === "workers" ? `Workers (${approvedWorkers.length})` : (
-              <span className="flex items-center gap-1.5">Approvals {pendingWorkers.length > 0 && <span className="bg-[#DE3831] text-white text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{pendingWorkers.length}</span>}</span>
-            )}
+            {t === "jobs" ? `Jobs (${jobs.length})`
+              : t === "commission" ? "Commission"
+              : t === "workers" ? `Workers (${approvedWorkers.length})`
+              : t === "partners" ? <span className="flex items-center gap-1.5">Partners {partners.length > 0 && <span className="bg-[#007A4D] text-white text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{partners.length}</span>}</span>
+              : <span className="flex items-center gap-1.5">Approvals {pendingWorkers.length > 0 && <span className="bg-[#DE3831] text-white text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{pendingWorkers.length}</span>}</span>
+            }
           </button>
         ))}
       </div>
@@ -473,7 +489,7 @@ export default function AdminPage() {
             </table>
           </div>
         </>
-      ) : (
+      ) : tab === "approvals" ? (
         /* ── Approvals tab ── */
         <div className="space-y-3">
           {pendingWorkers.length === 0 && (
@@ -525,6 +541,51 @@ export default function AdminPage() {
                 <button onClick={() => setSelectedWorker(w)} className="px-4 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium">
                   <Eye className="w-4 h-4" />
                 </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* ── Partners tab ── */
+        <div className="space-y-3">
+          {partners.length === 0 && (
+            <div className="text-center py-16 text-gray-400">
+              <Handshake className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm font-medium">No partnership inquiries yet</p>
+              <p className="text-xs mt-1">Submissions from /partner will appear here.</p>
+            </div>
+          )}
+          {partners.map((p) => (
+            <div key={p.id} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="font-semibold text-gray-900">{p.name}</p>
+                  <p className="text-sm text-orange-600 font-medium">{p.organisation}</p>
+                </div>
+                <span className="text-xs px-2 py-1 rounded-full bg-[#e8f5ef] text-[#007A4D] font-medium capitalize flex-shrink-0">{p.type}</span>
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                {p.email && <a href={`mailto:${p.email}`} className="flex items-center gap-1 text-orange-600">{p.email}</a>}
+                {p.phone && <a href={`tel:${p.phone}`} className="flex items-center gap-1 text-orange-600">{p.phone}</a>}
+                <span className="text-gray-400">{new Date(p.created_at).toLocaleDateString("en-ZA")}</span>
+              </div>
+              <p className="text-sm text-gray-600 bg-gray-50 rounded-xl p-3 leading-relaxed">{p.message}</p>
+              <div className="flex gap-2">
+                <a
+                  href={`mailto:${p.email}?subject=SkillConnect%20Partnership%20Inquiry&body=Hi%20${encodeURIComponent(p.name)}%2C%0A%0AThank%20you%20for%20reaching%20out%20about%20a%20partnership%20with%20SkillConnect.`}
+                  className="flex items-center gap-1.5 text-xs bg-[#007A4D] text-white px-3 py-2 rounded-xl font-medium"
+                >
+                  Reply via Email
+                </a>
+                {p.phone && (
+                  <a
+                    href={`https://wa.me/${p.phone.replace(/\s+/g, "").replace(/^\+/, "")}?text=${encodeURIComponent(`Hi ${p.name} 👋\n\nThank you for your partnership inquiry with SkillConnect. We'd love to connect and discuss further.\n\nBest regards,\nSkillConnect Team`)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs bg-[#002395] text-white px-3 py-2 rounded-xl font-medium"
+                  >
+                    Reply via WhatsApp
+                  </a>
+                )}
               </div>
             </div>
           ))}

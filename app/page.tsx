@@ -6,13 +6,13 @@ import {
   PaintBucket,
   Grid3X3,
   HardHat,
-  Phone,
   MapPin,
   Star,
   ArrowRight,
   Users,
   TrendingUp,
   Shield,
+  Quote,
 } from "lucide-react";
 import LocationBadge from "@/components/LocationBadge";
 
@@ -42,6 +42,27 @@ const stats = [
   { value: "Ward 4", label: "Launch area", icon: MapPin },
   { value: "4.8★", label: "Average rating", icon: Star },
   { value: "6–12%", label: "Commission only", icon: TrendingUp },
+];
+
+const testimonials = [
+  {
+    quote: "I've been doing plumbing in Chatsworth for 12 years but always struggled to find steady work. SkillConnect got me 3 jobs in my first week. Now clients call me directly because they trust the platform.",
+    name: "Thabo M.",
+    role: "Plumber · Ward 4, Chatsworth",
+    type: "worker",
+  },
+  {
+    quote: "I needed an electrician urgently and didn't know who to trust. SkillConnect matched me with someone from my own street — he came within the hour. Honest pricing, great work.",
+    name: "Priya N.",
+    role: "Client · Chatsworth",
+    type: "client",
+  },
+  {
+    quote: "As a carpenter I never had a way to show people my work. Now my profile does that for me. The reviews from real clients mean new customers already trust me before I arrive.",
+    name: "Sipho D.",
+    role: "Carpenter · Ward 6, Chatsworth",
+    type: "worker",
+  },
 ];
 
 export default function Home() {
@@ -202,6 +223,34 @@ export default function Home() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="bg-white py-16 border-t border-gray-100">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">What the community says</h2>
+          <p className="text-center text-gray-500 mb-10 text-sm">Real voices from workers and clients in Chatsworth</p>
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map(({ quote, name, role, type }) => (
+              <div key={name} className="bg-gray-50 rounded-2xl p-6 flex flex-col gap-4 border border-gray-100">
+                <Quote className={`w-6 h-6 flex-shrink-0 ${type === "worker" ? "text-[#007A4D]" : "text-orange-500"}`} />
+                <p className="text-gray-700 text-sm leading-relaxed flex-1">&ldquo;{quote}&rdquo;</p>
+                <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 ${type === "worker" ? "bg-[#007A4D]" : "bg-orange-500"}`}>
+                    {name.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{name}</p>
+                    <p className="text-xs text-gray-400">{role}</p>
+                  </div>
+                  <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${type === "worker" ? "bg-[#e8f5ef] text-[#007A4D]" : "bg-orange-50 text-orange-600"}`}>
+                    {type === "worker" ? "Worker" : "Client"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

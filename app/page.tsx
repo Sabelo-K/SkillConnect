@@ -13,8 +13,22 @@ import {
   TrendingUp,
   Shield,
   Quote,
+  Briefcase,
 } from "lucide-react";
 import LocationBadge from "@/components/LocationBadge";
+
+async function getLiveStats() {
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/api/impact`,
+      { next: { revalidate: 300 } }
+    );
+    if (!res.ok) throw new Error();
+    return res.json();
+  } catch {
+    return null;
+  }
+}
 
 const trades = [
   { name: "Plumber", icon: Wrench, color: "bg-blue-50 text-blue-600" },
@@ -37,12 +51,6 @@ const workerSteps = [
   { step: "3", title: "Start earning", desc: "Clients in your area find and book you. You get paid directly — we take a small commission." },
 ];
 
-const stats = [
-  { value: "6+", label: "Verified workers", icon: Users },
-  { value: "Ward 4", label: "Launch area", icon: MapPin },
-  { value: "4.8★", label: "Average rating", icon: Star },
-  { value: "6–12%", label: "Commission only", icon: TrendingUp },
-];
 
 const testimonials = [
   {
@@ -65,7 +73,32 @@ const testimonials = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const live = await getLiveStats();
+
+  const stats = [
+    {
+      value: live ? `${live.totalWorkers}` : "—",
+      label: "Verified workers",
+      icon: Users,
+    },
+    {
+      value: live ? `${live.completedJobs}` : "—",
+      label: "Jobs completed",
+      icon: Briefcase,
+    },
+    {
+      value: live?.avgRating > 0 ? `${live.avgRating}★` : "—",
+      label: "Average rating",
+      icon: Star,
+    },
+    {
+      value: "6–12%",
+      label: "Commission only",
+      icon: TrendingUp,
+    },
+  ];
+
   return (
     <div className="flex flex-col">
       {/* Hero */}

@@ -1,13 +1,13 @@
-import { Wrench, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
+import Logo from "./Logo";
 
 export default function Footer() {
   return (
     <footer className="bg-[#00311e] text-gray-300 mt-auto">
       <div className="max-w-6xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
         <div>
-          <div className="flex items-center gap-2 font-bold text-xl text-orange-500 mb-2">
-            <Wrench className="w-5 h-5" />
-            SkillConnect
+          <div className="mb-2">
+            <Logo dark />
           </div>
           <p className="text-sm text-gray-400">
             Local skills. Local jobs. Local money.

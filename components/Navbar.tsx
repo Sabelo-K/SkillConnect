@@ -1,7 +1,7 @@
 "use client";
-import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, Wrench } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import Logo from "./Logo";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -9,10 +9,7 @@ export default function Navbar() {
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-orange-600">
-          <Wrench className="w-6 h-6" />
-          SkillConnect
-        </Link>
+        <Logo />
 
         {/* Desktop */}
         <div className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">

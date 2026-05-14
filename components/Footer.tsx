@@ -26,6 +26,7 @@ export default function Footer() {
             <li><a href="/impact" className="hover:text-orange-400 transition-colors">Our Impact</a></li>
             <li><a href="/how-we-verify" className="hover:text-orange-400 transition-colors">How We Verify</a></li>
             <li><a href="/partner" className="hover:text-orange-400 transition-colors">Partner with Us</a></li>
+            <li><a href="/pitch" className="hover:text-orange-400 transition-colors">Stakeholder Brief</a></li>
             <li><a href="/privacy" className="hover:text-orange-400 transition-colors">Privacy Policy</a></li>
           </ul>
         </div>

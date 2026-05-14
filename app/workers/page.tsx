@@ -29,7 +29,7 @@ function WorkersContent() {
     <div className="max-w-6xl mx-auto px-4 py-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Worker directory</h1>
-        <p className="text-gray-500">Browse verified skilled workers in Chatsworth and surrounding areas.</p>
+        <p className="text-gray-500">Browse verified skilled workers in Sweetwaters, Pietermaritzburg and surrounding areas.</p>
       </div>
 
       {/* Filters */}

@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       photoUrl: body.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(body.name)}`,
       idDocumentUrl: body.idDocumentUrl || "",
       workPhotos: [],
+      tiktokUrl: body.tiktokUrl || undefined,
       available: true,
     });
     return NextResponse.json(worker, { status: 201 });

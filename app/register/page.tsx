@@ -122,9 +122,10 @@ export default function RegisterPage() {
     phone: "",
     trade: "",
     ward: "",
-    area: "Chatsworth",
+    area: "Sweetwaters, Pietermaritzburg",
     yearsExperience: "",
     bio: "",
+    tiktokUrl: "",
   });
   const [selfie, setSelfie] = useState("");
   const [idDocument, setIdDocument] = useState("");
@@ -279,7 +280,7 @@ export default function RegisterPage() {
               required
               value={form.area}
               onChange={(e) => setForm({ ...form, area: e.target.value })}
-              placeholder="e.g. Chatsworth"
+              placeholder="e.g. Sweetwaters, Pietermaritzburg"
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
           </div>
@@ -321,6 +322,22 @@ export default function RegisterPage() {
             placeholder="Describe your skills, experience, and what kind of jobs you do best..."
             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
           />
+        </div>
+
+        {/* TikTok link */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">TikTok profile link <span className="text-gray-400 font-normal">(optional)</span></label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">tiktok.com/@</span>
+            <input
+              type="text"
+              value={form.tiktokUrl.replace(/.*tiktok\.com\/@?/, "")}
+              onChange={(e) => setForm({ ...form, tiktokUrl: e.target.value ? `https://www.tiktok.com/@${e.target.value.replace(/.*tiktok\.com\/@?/, "")}` : "" })}
+              placeholder="yourhandle"
+              className="w-full border border-gray-200 rounded-xl pl-[7.5rem] pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-1">Share videos of your work so clients can see your quality before booking.</p>
         </div>
 
         {/* POPIA consent */}

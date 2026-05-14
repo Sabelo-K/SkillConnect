@@ -9,7 +9,7 @@ const geist = Geist({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "SkillConnect — Local skills. Local jobs. Local money.",
   description:
-    "SkillConnect connects trusted local skilled workers — plumbers, electricians, carpenters, painters and more — with clients in Chatsworth, Durban.",
+    "SkillConnect connects trusted local skilled workers — plumbers, electricians, carpenters, painters and more — with clients in Sweetwaters, Pietermaritzburg.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

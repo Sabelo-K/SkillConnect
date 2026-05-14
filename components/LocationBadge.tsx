@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 export default function LocationBadge() {
-  const [location, setLocation] = useState("Chatsworth, Durban");
+  const [location, setLocation] = useState("Sweetwaters, Pietermaritzburg");
 
   useEffect(() => {
     if (!navigator.geolocation) return;

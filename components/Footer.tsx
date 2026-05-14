@@ -13,7 +13,7 @@ export default function Footer() {
             Local skills. Local jobs. Local money.
           </p>
           <p className="text-sm text-gray-400 mt-1">
-            Chatsworth, Durban · Expanding across KZN
+            Sweetwaters, Pietermaritzburg · Expanding across KZN
           </p>
         </div>
 

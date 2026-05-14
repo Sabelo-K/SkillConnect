@@ -19,7 +19,7 @@ const steps = [
     details: [
       "Full name and mobile number",
       "Trade / skill and years of experience",
-      "Residential area and ward in Chatsworth",
+      "Residential area and ward in Sweetwaters, Pietermaritzburg",
       "Short biography describing their work",
       "POPIA consent to data processing",
     ],
@@ -59,7 +59,7 @@ const steps = [
     details: [
       "Worker's stated area and ward is noted",
       "SkillConnect's locality-first model prioritises workers in the same ward as the job",
-      "Workers outside Chatsworth are accepted but ranked lower in matching",
+      "Workers outside Sweetwaters, Pietermaritzburg are accepted but ranked lower in matching",
     ],
   },
   {

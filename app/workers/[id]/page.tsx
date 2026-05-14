@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Worker } from "@/lib/types";
 import {
-  ArrowLeft, MapPin, Star, Briefcase, Phone, CheckCircle, Shield,
+  ArrowLeft, MapPin, Star, Briefcase, Phone, CheckCircle, Shield, ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -109,6 +109,22 @@ export default function WorkerProfilePage() {
             </h2>
             <p className="text-sm text-gray-600 leading-relaxed">{worker.bio}</p>
           </div>
+
+          {/* TikTok */}
+          {worker.tiktokUrl && (
+            <a
+              href={worker.tiktokUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 bg-black text-white rounded-xl px-4 py-3 text-sm font-medium hover:bg-gray-900 transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.79 1.54V6.78a4.85 4.85 0 0 1-1.02-.09z"/>
+              </svg>
+              <span>Watch {worker.name.split(" ")[0]}&apos;s work on TikTok</span>
+              <ExternalLink className="w-4 h-4 ml-auto opacity-60" />
+            </a>
+          )}
 
           {/* Trust */}
           <div className="flex flex-col gap-2">

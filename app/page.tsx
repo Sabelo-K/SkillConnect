@@ -46,21 +46,21 @@ const stats = [
 
 const testimonials = [
   {
-    quote: "I've been doing plumbing in Chatsworth for 12 years but always struggled to find steady work. SkillConnect got me 3 jobs in my first week. Now clients call me directly because they trust the platform.",
+    quote: "I've been doing plumbing in Sweetwaters, Pietermaritzburg for 12 years but always struggled to find steady work. SkillConnect got me 3 jobs in my first week. Now clients call me directly because they trust the platform.",
     name: "Thabo M.",
-    role: "Plumber · Ward 4, Chatsworth",
+    role: "Plumber · Ward 4, Sweetwaters, Pietermaritzburg",
     type: "worker",
   },
   {
     quote: "I needed an electrician urgently and didn't know who to trust. SkillConnect matched me with someone from my own street — he came within the hour. Honest pricing, great work.",
     name: "Priya N.",
-    role: "Client · Chatsworth",
+    role: "Client · Sweetwaters, Pietermaritzburg",
     type: "client",
   },
   {
     quote: "As a carpenter I never had a way to show people my work. Now my profile does that for me. The reviews from real clients mean new customers already trust me before I arrive.",
     name: "Sipho D.",
-    role: "Carpenter · Ward 6, Chatsworth",
+    role: "Carpenter · Ward 6, Sweetwaters, Pietermaritzburg",
     type: "worker",
   },
 ];
@@ -230,7 +230,7 @@ export default function Home() {
       <section className="bg-white py-16 border-t border-gray-100">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">What the community says</h2>
-          <p className="text-center text-gray-500 mb-10 text-sm">Real voices from workers and clients in Chatsworth</p>
+          <p className="text-center text-gray-500 mb-10 text-sm">Real voices from workers and clients in Sweetwaters, Pietermaritzburg</p>
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map(({ quote, name, role, type }) => (
               <div key={name} className="bg-gray-50 rounded-2xl p-6 flex flex-col gap-4 border border-gray-100">

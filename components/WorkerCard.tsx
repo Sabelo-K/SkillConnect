@@ -50,9 +50,19 @@ export default function WorkerCard({ worker }: { worker: Worker }) {
           </div>
         </div>
         <p className="text-sm text-gray-500 mt-3 line-clamp-2">{worker.bio}</p>
-        <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
-          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-          {worker.jobsCompleted} jobs completed on SkillConnect
+        <div className="mt-3 flex items-center gap-3 flex-wrap">
+          <span className="flex items-center gap-2 text-xs text-gray-400">
+            <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+            {worker.jobsCompleted} jobs completed
+          </span>
+          {worker.tiktokUrl && (
+            <span className="flex items-center gap-1 text-xs font-medium bg-black text-white px-2 py-0.5 rounded-full">
+              <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.79 1.54V6.78a4.85 4.85 0 0 1-1.02-.09z"/>
+              </svg>
+              TikTok
+            </span>
+          )}
         </div>
       </div>
     </Link>

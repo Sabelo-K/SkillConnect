@@ -104,7 +104,7 @@ export default function PartnerPage() {
           </h1>
           <p className="text-lg text-green-100 max-w-2xl mx-auto">
             We work with municipalities, NGOs, community organisations and corporates to scale local
-            employment in Chatsworth and beyond.
+            employment in Sweetwaters, Pietermaritzburg and beyond.
           </p>
         </div>
       </section>

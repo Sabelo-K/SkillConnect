@@ -22,6 +22,7 @@ export interface Worker {
   photoUrl: string;       // selfie — used as profile picture
   idDocumentUrl: string;  // copy of ID document
   workPhotos: string[];
+  tiktokUrl?: string;
   rating: number;
   reviewCount: number;
   tier: WorkerTier;

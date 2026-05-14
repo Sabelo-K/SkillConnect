@@ -42,6 +42,13 @@ export interface Review {
   createdAt: string;
 }
 
+export interface TimelineEvent {
+  at: string;       // ISO timestamp
+  event: string;
+  by: "client" | "worker" | "admin" | "system";
+  note?: string;
+}
+
 export interface JobRequest {
   id: string;
   clientName: string;
@@ -50,7 +57,7 @@ export interface JobRequest {
   ward: string;
   area: string;
   description: string;
-  status: "pending" | "matched" | "completed";
+  status: "pending" | "matched" | "quoted" | "accepted" | "completion_requested" | "completed" | "disputed" | "cancelled";
   matchedWorkerId?: string;
   createdAt: string;
   completedAt?: string;
@@ -59,4 +66,13 @@ export interface JobRequest {
   commissionAmount?: number;  // jobValue * commissionRate / 100
   commissionStatus: "none" | "awaiting" | "paid";
   photoUrl?: string;
+  quotedAmount?: number;
+  scopeNotes?: string;
+  completionNotes?: string;
+  completionPhotos?: string[];
+  disputeReason?: string;
+  disputeResolution?: string;
+  workerToken?: string;
+  clientToken?: string;
+  timeline?: TimelineEvent[];
 }

@@ -6,9 +6,10 @@ import {
   Users, ClipboardList, MapPin, Phone, Star, CheckCircle, Clock,
   X, Eye, IdCard, Briefcase, CircleDollarSign, TrendingUp, AlertCircle,
   MessageCircle, ToggleLeft, ToggleRight, ClipboardCheck, LogOut, UserCheck, UserX, Handshake, Trash2,
+  Link2, Copy, ShieldAlert,
 } from "lucide-react";
 
-type Tab = "workers" | "jobs" | "commission" | "approvals" | "partners";
+type Tab = "workers" | "jobs" | "commission" | "approvals" | "partners" | "disputes";
 
 interface PartnerInquiry {
   id: string;
@@ -150,6 +151,60 @@ function CompleteJobModal({ job, workers, onClose, onDone }: { job: JobRequest; 
   );
 }
 
+// ── Dispute resolution modal ─────────────────────────────────────────────────
+function DisputeModal({ job, workers, onClose, onResolve }: { job: JobRequest; workers: Worker[]; onClose: () => void; onResolve: (jobId: string, resolution: string, outcome: "completed" | "cancelled") => void }) {
+  const [resolution, setResolution] = useState("");
+  const [outcome, setOutcome] = useState<"completed" | "cancelled">("completed");
+  const [saving, setSaving] = useState(false);
+  const worker = workers.find((w) => w.id === job.matchedWorkerId);
+  useEffect(() => { document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2"><ShieldAlert className="w-5 h-5 text-red-500" /><h2 className="text-lg font-bold text-gray-900">Resolve Dispute</h2></div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="bg-red-50 border border-red-100 rounded-xl p-4 text-sm space-y-1">
+            <p><span className="text-gray-500">Client:</span> <span className="font-medium">{job.clientName}</span></p>
+            {worker && <p><span className="text-gray-500">Worker:</span> <span className="font-medium">{worker.name}</span></p>}
+            {job.disputeReason && <p className="text-red-600 mt-2 italic">&ldquo;{job.disputeReason}&rdquo;</p>}
+          </div>
+          {job.completionNotes && (
+            <div className="bg-gray-50 rounded-xl p-4 text-sm">
+              <p className="text-gray-500 text-xs mb-1">Worker&apos;s completion notes:</p>
+              <p className="text-gray-700">{job.completionNotes}</p>
+              {(job.completionPhotos ?? []).length > 0 && (
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {(job.completionPhotos ?? []).map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-600 underline">Photo {i + 1}</a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Resolution note *</label>
+            <textarea value={resolution} onChange={(e) => setResolution(e.target.value)} rows={3} placeholder="Describe how this dispute was resolved..." className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Outcome</label>
+            <div className="flex gap-3">
+              <button onClick={() => setOutcome("completed")} className={`flex-1 py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${outcome === "completed" ? "border-[#007A4D] bg-[#e8f5ef] text-[#007A4D]" : "border-gray-200 text-gray-500"}`}>Job completed</button>
+              <button onClick={() => setOutcome("cancelled")} className={`flex-1 py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${outcome === "cancelled" ? "border-red-500 bg-red-50 text-red-600" : "border-gray-200 text-gray-500"}`}>Cancel job</button>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 py-3 rounded-xl text-sm font-medium">Cancel</button>
+            <button disabled={!resolution.trim() || saving} onClick={async () => { setSaving(true); await onResolve(job.id, resolution, outcome); setSaving(false); }} className="flex-1 bg-orange-600 text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-60">{saving ? "Saving..." : "Resolve"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main admin page ──────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("jobs");
@@ -160,6 +215,8 @@ export default function AdminPage() {
   const [completingJob, setCompletingJob] = useState<JobRequest | null>(null);
   const [partners, setPartners] = useState<PartnerInquiry[]>([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [jobLinks, setJobLinks] = useState<{ jobId: string; workerToken: string; clientToken: string } | null>(null);
+  const [resolvingDispute, setResolvingDispute] = useState<JobRequest | null>(null);
   const router = useRouter();
 
   const refreshData = useCallback(() =>
@@ -170,6 +227,20 @@ export default function AdminPage() {
     ]).then(([w, j, p]) => { setWorkers(w); setJobs(j); setPartners(Array.isArray(p) ? p : []); }), []);
 
   useEffect(() => { refreshData().finally(() => setLoading(false)); }, [refreshData]);
+
+  const handleGenerateLinks = async (jobId: string) => {
+    const res = await fetch(`/api/jobs/${jobId}/tokens`, { method: "POST" });
+    if (!res.ok) return;
+    const { workerToken, clientToken } = await res.json();
+    setJobLinks({ jobId, workerToken, clientToken });
+    await refreshData();
+  };
+
+  const handleResolveDispute = async (jobId: string, resolution: string, outcome: "completed" | "cancelled") => {
+    await fetch(`/api/jobs/${jobId}/resolve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resolution, outcome }) });
+    setResolvingDispute(null);
+    await refreshData();
+  };
 
   const handleDeleteWorker = async (workerId: string) => {
     await fetch(`/api/workers/${workerId}`, { method: "DELETE" });
@@ -185,14 +256,18 @@ export default function AdminPage() {
   const handleCompleteJobDone = async () => { setCompletingJob(null); await refreshData(); };
   const handleToggleAvailability = async (workerId: string) => { await fetch(`/api/workers/${workerId}/availability`, { method: "POST" }); await refreshData(); };
 
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://skillconnect.vercel.app";
+
   const buildWhatsAppUrl = (job: JobRequest, worker: Worker) => {
     const phone = worker.phone.replace(/\s+/g, "").replace(/^\+/, "");
-    return `https://wa.me/${phone}?text=${encodeURIComponent(`Hi ${worker.name} 👋\n\nYou have a new SkillConnect job!\n\n📋 Trade: ${job.trade}\n👤 Client: ${job.clientName}\n📞 Client phone: ${job.clientPhone}\n📍 Area: ${job.area}\n📝 Details: ${job.description}\n\nPlease confirm you can attend by replying. ✅`)}`;
+    const linkLine = job.workerToken ? `\n\n🔗 Your job portal: ${origin}/job/worker/${job.workerToken}` : "";
+    return `https://wa.me/${phone}?text=${encodeURIComponent(`Hi ${worker.name} 👋\n\nYou have a new SkillConnect job!\n\n📋 Trade: ${job.trade}\n👤 Client: ${job.clientName}\n📞 Client phone: ${job.clientPhone}\n📍 Area: ${job.area}\n📝 Details: ${job.description}${linkLine}\n\nPlease confirm you can attend by replying. ✅`)}`;
   };
 
   const buildClientNotifyUrl = (job: JobRequest, worker: Worker) => {
     const phone = job.clientPhone.replace(/\s+/g, "").replace(/^\+/, "");
-    return `https://wa.me/${phone}?text=${encodeURIComponent(`Hi ${job.clientName} 👋\n\nGreat news! We've found a worker for your SkillConnect request.\n\n🔧 Trade: ${job.trade}\n👷 Worker: ${worker.name}\n📞 Contact: ${worker.phone}\n\nPlease contact them directly to arrange a time. Thank you for using SkillConnect! 🙏`)}`;
+    const linkLine = job.clientToken ? `\n\n🔗 Track your job: ${origin}/job/client/${job.clientToken}` : "";
+    return `https://wa.me/${phone}?text=${encodeURIComponent(`Hi ${job.clientName} 👋\n\nGreat news! We've found a worker for your SkillConnect request.\n\n🔧 Trade: ${job.trade}\n👷 Worker: ${worker.name}\n📞 Contact: ${worker.phone}${linkLine}\n\nPlease contact them directly to arrange a time. Thank you for using SkillConnect! 🙏`)}`;
   };
 
   const buildReviewUrl = (job: JobRequest) => {
@@ -204,17 +279,57 @@ export default function AdminPage() {
   const approvedWorkers = workers.filter((w) => w.status === "approved");
   const pendingWorkers = workers.filter((w) => w.status === "pending");
   const completedJobs = jobs.filter((j) => j.status === "completed");
+  const disputedJobs = jobs.filter((j) => j.status === "disputed");
   const totalEarned = completedJobs.reduce((s, j) => s + (j.commissionAmount ?? 0), 0);
   const totalCollected = completedJobs.filter((j) => j.commissionStatus === "paid").reduce((s, j) => s + (j.commissionAmount ?? 0), 0);
   const totalOutstanding = completedJobs.filter((j) => j.commissionStatus === "awaiting").reduce((s, j) => s + (j.commissionAmount ?? 0), 0);
 
-  const statusColor: Record<JobRequest["status"], string> = { pending: "bg-[#fffbea] text-[#b8860b]", matched: "bg-[#eef1fb] text-[#002395]", completed: "bg-[#e8f5ef] text-[#007A4D]" };
+  const statusColor: Record<JobRequest["status"], string> = { pending: "bg-[#fffbea] text-[#b8860b]", matched: "bg-[#eef1fb] text-[#002395]", quoted: "bg-[#eef1fb] text-[#5a2d82]", accepted: "bg-[#eef1fb] text-[#003580]", completion_requested: "bg-[#fffbea] text-[#b8860b]", completed: "bg-[#e8f5ef] text-[#007A4D]", disputed: "bg-[#fde8e8] text-[#c0392b]", cancelled: "bg-gray-100 text-gray-500" };
   const commissionColor: Record<JobRequest["commissionStatus"], string> = { none: "bg-gray-100 text-gray-400", awaiting: "bg-[#fffbea] text-[#b8860b]", paid: "bg-[#e8f5ef] text-[#007A4D]" };
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
       {selectedWorker && <WorkerModal worker={selectedWorker} onClose={() => setSelectedWorker(null)} />}
       {completingJob && <CompleteJobModal job={completingJob} workers={workers} onClose={() => setCompletingJob(null)} onDone={handleCompleteJobDone} />}
+
+      {/* Accountability links modal */}
+      {jobLinks && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setJobLinks(null)}>
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-xl w-full sm:max-w-lg max-h-[92vh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2"><Link2 className="w-5 h-5 text-orange-500" /><h2 className="text-lg font-bold text-gray-900">Accountability Links</h2></div>
+              <button onClick={() => setJobLinks(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-500">Share these links via WhatsApp. Each party can only see their own view.</p>
+              {[
+                { label: "Worker link", token: jobLinks.workerToken, path: "worker", color: "bg-[#007A4D]", desc: "Worker submits quote + completion evidence" },
+                { label: "Client link", token: jobLinks.clientToken, path: "client", color: "bg-orange-600", desc: "Client reviews quote, confirms or disputes" },
+              ].map(({ label, token, path, color, desc }) => {
+                const url = `${origin}/job/${path}/${token}`;
+                return (
+                  <div key={path} className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-semibold text-gray-900 text-sm">{label}</p>
+                      <span className="text-xs text-gray-400">{desc}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-600 truncate">{url}</code>
+                      <button onClick={() => navigator.clipboard.writeText(url)} className="p-2 bg-gray-200 hover:bg-gray-300 rounded-lg flex-shrink-0 transition-colors" title="Copy link"><Copy className="w-4 h-4 text-gray-600" /></button>
+                    </div>
+                    <a href={`https://wa.me/?text=${encodeURIComponent(`Here is your SkillConnect job link:\n${url}`)}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1.5 text-xs ${color} text-white px-3 py-2 rounded-xl font-medium w-fit`}>
+                      <MessageCircle className="w-3.5 h-3.5" /> Send via WhatsApp
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dispute resolution modal */}
+      {resolvingDispute && <DisputeModal job={resolvingDispute} workers={workers} onClose={() => setResolvingDispute(null)} onResolve={handleResolveDispute} />}
 
       {/* Delete confirmation modal */}
       {confirmDeleteId && (() => {
@@ -270,7 +385,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 mb-5 overflow-x-auto">
-        {(["jobs", "commission", "workers", "approvals", "partners"] as Tab[]).map((t) => (
+        {(["jobs", "commission", "workers", "approvals", "partners", "disputes"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`flex-1 sm:flex-none px-3 sm:px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap flex items-center justify-center gap-1.5 ${tab === t ? "border-orange-600 text-orange-600" : "border-transparent text-gray-500"}`}
           >
@@ -278,6 +393,7 @@ export default function AdminPage() {
               : t === "commission" ? "Commission"
               : t === "workers" ? `Workers (${approvedWorkers.length})`
               : t === "partners" ? <span className="flex items-center gap-1.5">Partners {partners.length > 0 && <span className="bg-[#007A4D] text-white text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{partners.length}</span>}</span>
+              : t === "disputes" ? <span className="flex items-center gap-1.5">Disputes {disputedJobs.length > 0 && <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{disputedJobs.length}</span>}</span>
               : <span className="flex items-center gap-1.5">Approvals {pendingWorkers.length > 0 && <span className="bg-[#DE3831] text-white text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{pendingWorkers.length}</span>}</span>
             }
           </button>
@@ -309,15 +425,21 @@ export default function AdminPage() {
                   </div>
                   <p className="text-xs text-gray-400 line-clamp-2">{j.description}</p>
                   <div className="flex flex-wrap gap-2 pt-1">
+                    {j.matchedWorkerId && !j.workerToken && (
+                      <button onClick={() => handleGenerateLinks(j.id)} className="flex items-center gap-1 text-xs bg-gray-800 text-white px-3 py-2 rounded-xl font-medium"><Link2 className="w-3.5 h-3.5" /> Generate Links</button>
+                    )}
+                    {j.workerToken && (
+                      <button onClick={() => setJobLinks({ jobId: j.id, workerToken: j.workerToken!, clientToken: j.clientToken! })} className="flex items-center gap-1 text-xs bg-gray-800 text-white px-3 py-2 rounded-xl font-medium"><Link2 className="w-3.5 h-3.5" /> View Links</button>
+                    )}
                     {j.status === "matched" && worker && (<>
                       <a href={buildWhatsAppUrl(j, worker)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs bg-[#007A4D] text-white px-3 py-2 rounded-xl font-medium"><MessageCircle className="w-3.5 h-3.5" /> Notify Worker</a>
                       <a href={buildClientNotifyUrl(j, worker)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs bg-[#002395] text-white px-3 py-2 rounded-xl font-medium"><MessageCircle className="w-3.5 h-3.5" /> Notify Client</a>
                     </>)}
-                    {j.status !== "completed" ? (
+                    {j.status !== "completed" && j.status !== "disputed" && j.status !== "cancelled" ? (
                       <button onClick={() => setCompletingJob(j)} className="flex items-center gap-1 text-xs bg-orange-600 text-white px-3 py-2 rounded-xl font-medium"><CheckCircle className="w-3.5 h-3.5" /> Mark Complete</button>
-                    ) : (
+                    ) : j.status === "completed" ? (
                       <a href={buildReviewUrl(j)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs bg-gray-700 text-white px-3 py-2 rounded-xl font-medium"><ClipboardCheck className="w-3.5 h-3.5" /> Request Review</a>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               );
@@ -348,15 +470,21 @@ export default function AdminPage() {
                       <td className="px-4 py-3"><span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${statusColor[j.status]}`}>{j.status}</span></td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1.5">
+                          {j.matchedWorkerId && !j.workerToken && (
+                            <button onClick={() => handleGenerateLinks(j.id)} className="flex items-center gap-1 text-xs bg-gray-800 text-white px-2.5 py-1.5 rounded-lg font-medium w-fit"><Link2 className="w-3 h-3" /> Generate Links</button>
+                          )}
+                          {j.workerToken && (
+                            <button onClick={() => setJobLinks({ jobId: j.id, workerToken: j.workerToken!, clientToken: j.clientToken! })} className="flex items-center gap-1 text-xs bg-gray-800 text-white px-2.5 py-1.5 rounded-lg font-medium w-fit"><Link2 className="w-3 h-3" /> View Links</button>
+                          )}
                           {j.status === "matched" && worker && (<>
                             <a href={buildWhatsAppUrl(j, worker)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs bg-[#007A4D] text-white px-2.5 py-1.5 rounded-lg font-medium w-fit"><MessageCircle className="w-3 h-3" /> Notify Worker</a>
                             <a href={buildClientNotifyUrl(j, worker)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs bg-[#002395] text-white px-2.5 py-1.5 rounded-lg font-medium w-fit"><MessageCircle className="w-3 h-3" /> Notify Client</a>
                           </>)}
-                          {j.status !== "completed" ? (
+                          {j.status !== "completed" && j.status !== "disputed" && j.status !== "cancelled" ? (
                             <button onClick={() => setCompletingJob(j)} className="flex items-center gap-1 text-xs bg-orange-600 text-white px-2.5 py-1.5 rounded-lg font-medium w-fit"><CheckCircle className="w-3 h-3" /> Mark Complete</button>
-                          ) : (
+                          ) : j.status === "completed" ? (
                             <a href={buildReviewUrl(j)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs bg-gray-700 text-white px-2.5 py-1.5 rounded-lg font-medium w-fit"><ClipboardCheck className="w-3 h-3" /> Request Review</a>
-                          )}
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -587,7 +715,7 @@ export default function AdminPage() {
             </div>
           ))}
         </div>
-      ) : (
+      ) : tab === "partners" ? (
         /* ── Partners tab ── */
         <div className="space-y-3">
           {partners.length === 0 && (
@@ -631,6 +759,103 @@ export default function AdminPage() {
               </div>
             </div>
           ))}
+        </div>
+      ) : (
+        /* ── Disputes tab ── */
+        <div className="space-y-4">
+          {disputedJobs.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <ShieldAlert className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm font-medium">No active disputes</p>
+              <p className="text-xs mt-1">Disputes raised by clients or workers will appear here for resolution.</p>
+            </div>
+          ) : (
+            disputedJobs.map((j) => {
+              const worker = workers.find((w) => w.id === j.matchedWorkerId);
+              return (
+                <div key={j.id} className="bg-white border-2 border-red-100 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <ShieldAlert className="w-4 h-4 text-red-500 flex-shrink-0" />
+                        <p className="font-semibold text-gray-900">{j.trade} · {j.clientName}</p>
+                      </div>
+                      <p className="text-xs text-gray-400">{j.area} · {new Date(j.createdAt).toLocaleDateString("en-ZA")}</p>
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded-full bg-red-50 text-red-600 font-medium flex-shrink-0">Disputed</span>
+                  </div>
+
+                  {/* Parties */}
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="bg-orange-50 rounded-xl p-3 text-sm">
+                      <p className="text-xs text-gray-400 mb-0.5">Client</p>
+                      <p className="font-medium text-gray-900">{j.clientName}</p>
+                      <a href={`tel:${j.clientPhone}`} className="text-xs text-orange-600">{j.clientPhone}</a>
+                    </div>
+                    {worker && (
+                      <div className="bg-[#f0f7f4] rounded-xl p-3 text-sm">
+                        <p className="text-xs text-gray-400 mb-0.5">Worker</p>
+                        <div className="flex items-center gap-2">
+                          <img src={worker.photoUrl} alt={worker.name} className="w-8 h-8 rounded-full object-cover" />
+                          <div>
+                            <p className="font-medium text-gray-900">{worker.name}</p>
+                            <a href={`tel:${worker.phone}`} className="text-xs text-[#007A4D]">{worker.phone}</a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dispute reason */}
+                  {j.disputeReason && (
+                    <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                      <p className="text-xs text-red-400 mb-1 font-medium">Client&apos;s concern</p>
+                      <p className="text-sm text-red-700">&ldquo;{j.disputeReason}&rdquo;</p>
+                    </div>
+                  )}
+
+                  {/* Completion evidence */}
+                  {j.completionNotes && (
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-xs text-gray-400 mb-1 font-medium">Worker&apos;s completion claim</p>
+                      <p className="text-sm text-gray-700">{j.completionNotes}</p>
+                      {(j.completionPhotos ?? []).filter(Boolean).length > 0 && (
+                        <div className="flex gap-3 mt-3 flex-wrap">
+                          {(j.completionPhotos ?? []).filter(Boolean).map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                              <img src={url} alt={`Photo ${i + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Timeline preview */}
+                  {(j.timeline ?? []).length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Audit trail</p>
+                      {(j.timeline ?? []).map((e, i) => (
+                        <div key={i} className="flex items-start gap-2 text-xs text-gray-500">
+                          <span className="text-gray-300 flex-shrink-0 mt-0.5">·</span>
+                          <span className="font-medium capitalize">{e.by}</span>
+                          <span className="text-gray-400">{new Date(e.at).toLocaleDateString("en-ZA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                          {e.note && <span className="text-gray-500 italic truncate">{e.note}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setResolvingDispute(j)}
+                    className="w-full bg-orange-600 text-white py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+                  >
+                    <ShieldAlert className="w-4 h-4" /> Resolve this dispute
+                  </button>
+                </div>
+              );
+            })
+          )}
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { Worker, JobRequest, Review, Trade } from "./types";
+import { Worker, JobRequest, Review, Trade, TimelineEvent } from "./types";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -47,6 +47,15 @@ function toJob(row: any): JobRequest {
     commissionAmount: row.commission_amount ?? undefined,
     commissionStatus: row.commission_status,
     photoUrl: row.photo_url ?? undefined,
+    quotedAmount: row.quoted_amount ?? undefined,
+    scopeNotes: row.scope_notes ?? undefined,
+    completionNotes: row.completion_notes ?? undefined,
+    completionPhotos: row.completion_photos ?? [],
+    disputeReason: row.dispute_reason ?? undefined,
+    disputeResolution: row.dispute_resolution ?? undefined,
+    workerToken: row.worker_token ?? undefined,
+    clientToken: row.client_token ?? undefined,
+    timeline: row.timeline ?? [],
   };
 }
 
@@ -213,6 +222,124 @@ export async function markCommissionPaid(jobId: string): Promise<JobRequest | nu
     .select()
     .single();
   if (error) throw error;
+  return toJob(data);
+}
+
+// ─── accountability ──────────────────────────────────────────────────────────
+
+function newToken(): string {
+  return crypto.randomUUID();
+}
+
+async function appendTimeline(jobId: string, event: TimelineEvent): Promise<void> {
+  const { data } = await supabase.from("jobs").select("timeline").eq("id", jobId).single();
+  const existing: TimelineEvent[] = Array.isArray(data?.timeline) ? data.timeline : [];
+  await supabase.from("jobs").update({ timeline: [...existing, event] }).eq("id", jobId);
+}
+
+export async function generateJobTokens(jobId: string): Promise<{ workerToken: string; clientToken: string }> {
+  const workerToken = newToken();
+  const clientToken = newToken();
+  const { error } = await supabase.from("jobs").update({ worker_token: workerToken, client_token: clientToken }).eq("id", jobId);
+  if (error) throw error;
+  await appendTimeline(jobId, { at: new Date().toISOString(), event: "links_generated", by: "admin" });
+  return { workerToken, clientToken };
+}
+
+export async function getJobByWorkerToken(token: string): Promise<JobRequest | undefined> {
+  const { data, error } = await supabase.from("jobs").select("*").eq("worker_token", token).single();
+  if (error) return undefined;
+  return toJob(data);
+}
+
+export async function getJobByClientToken(token: string): Promise<JobRequest | undefined> {
+  const { data, error } = await supabase.from("jobs").select("*").eq("client_token", token).single();
+  if (error) return undefined;
+  return toJob(data);
+}
+
+export async function submitQuote(jobId: string, quotedAmount: number, scopeNotes: string): Promise<JobRequest | null> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ status: "quoted", quoted_amount: quotedAmount, scope_notes: scopeNotes })
+    .eq("id", jobId)
+    .eq("status", "matched")
+    .select()
+    .single();
+  if (error) return null;
+  await appendTimeline(jobId, { at: new Date().toISOString(), event: "quote_submitted", by: "worker", note: `R${quotedAmount} — ${scopeNotes}` });
+  return toJob(data);
+}
+
+export async function acceptQuote(jobId: string): Promise<JobRequest | null> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ status: "accepted" })
+    .eq("id", jobId)
+    .eq("status", "quoted")
+    .select()
+    .single();
+  if (error) return null;
+  await appendTimeline(jobId, { at: new Date().toISOString(), event: "quote_accepted", by: "client" });
+  return toJob(data);
+}
+
+export async function requestCompletion(
+  jobId: string,
+  completionNotes: string,
+  completionPhotos: string[]
+): Promise<JobRequest | null> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ status: "completion_requested", completion_notes: completionNotes, completion_photos: completionPhotos })
+    .eq("id", jobId)
+    .eq("status", "accepted")
+    .select()
+    .single();
+  if (error) return null;
+  await appendTimeline(jobId, { at: new Date().toISOString(), event: "completion_requested", by: "worker", note: completionNotes });
+  return toJob(data);
+}
+
+export async function confirmCompletion(jobId: string): Promise<JobRequest | null> {
+  const job = await getJobById(jobId);
+  if (!job) return null;
+  const result = await completeJob(jobId, job.quotedAmount ?? 0, job.commissionRate);
+  await appendTimeline(jobId, { at: new Date().toISOString(), event: "completion_confirmed", by: "client" });
+  return result;
+}
+
+export async function raiseDispute(jobId: string, reason: string): Promise<JobRequest | null> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ status: "disputed", dispute_reason: reason })
+    .eq("id", jobId)
+    .select()
+    .single();
+  if (error) return null;
+  await appendTimeline(jobId, { at: new Date().toISOString(), event: "dispute_raised", by: "client", note: reason });
+  return toJob(data);
+}
+
+export async function resolveDispute(
+  jobId: string,
+  resolution: string,
+  outcome: "completed" | "cancelled"
+): Promise<JobRequest | null> {
+  const updates: Record<string, unknown> = { status: outcome, dispute_resolution: resolution };
+  if (outcome === "completed") {
+    updates.completed_at = new Date().toISOString().split("T")[0];
+    updates.commission_status = "awaiting";
+  }
+  const { data, error } = await supabase.from("jobs").update(updates).eq("id", jobId).select().single();
+  if (error) return null;
+  await appendTimeline(jobId, { at: new Date().toISOString(), event: "dispute_resolved", by: "admin", note: `${outcome}: ${resolution}` });
+  if (outcome === "completed" && data.matched_worker_id) {
+    const worker = await getWorkerById(data.matched_worker_id);
+    if (worker) {
+      await supabase.from("workers").update({ jobs_completed: worker.jobsCompleted + 1 }).eq("id", data.matched_worker_id);
+    }
+  }
   return toJob(data);
 }
 

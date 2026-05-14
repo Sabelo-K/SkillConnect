@@ -5,7 +5,7 @@ import { Worker, JobRequest } from "@/lib/types";
 import {
   Users, ClipboardList, MapPin, Phone, Star, CheckCircle, Clock,
   X, Eye, IdCard, Briefcase, CircleDollarSign, TrendingUp, AlertCircle,
-  MessageCircle, ToggleLeft, ToggleRight, ClipboardCheck, LogOut, UserCheck, UserX, Handshake,
+  MessageCircle, ToggleLeft, ToggleRight, ClipboardCheck, LogOut, UserCheck, UserX, Handshake, Trash2,
 } from "lucide-react";
 
 type Tab = "workers" | "jobs" | "commission" | "approvals" | "partners";
@@ -159,6 +159,7 @@ export default function AdminPage() {
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [completingJob, setCompletingJob] = useState<JobRequest | null>(null);
   const [partners, setPartners] = useState<PartnerInquiry[]>([]);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const router = useRouter();
 
   const refreshData = useCallback(() =>
@@ -169,6 +170,12 @@ export default function AdminPage() {
     ]).then(([w, j, p]) => { setWorkers(w); setJobs(j); setPartners(Array.isArray(p) ? p : []); }), []);
 
   useEffect(() => { refreshData().finally(() => setLoading(false)); }, [refreshData]);
+
+  const handleDeleteWorker = async (workerId: string) => {
+    await fetch(`/api/workers/${workerId}`, { method: "DELETE" });
+    setConfirmDeleteId(null);
+    await refreshData();
+  };
 
   const handleWorkerStatus = async (workerId: string, status: "approved" | "rejected") => {
     await fetch(`/api/workers/${workerId}/status`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
@@ -208,6 +215,28 @@ export default function AdminPage() {
     <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
       {selectedWorker && <WorkerModal worker={selectedWorker} onClose={() => setSelectedWorker(null)} />}
       {completingJob && <CompleteJobModal job={completingJob} workers={workers} onClose={() => setCompletingJob(null)} onDone={handleCompleteJobDone} />}
+
+      {/* Delete confirmation modal */}
+      {confirmDeleteId && (() => {
+        const w = workers.find((x) => x.id === confirmDeleteId);
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setConfirmDeleteId(null)}>
+            <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-xl w-full sm:max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 text-center mb-1">Remove worker?</h3>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                <strong>{w?.name}</strong> will be permanently removed from SkillConnect. This cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmDeleteId(null)} className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium">Cancel</button>
+                <button onClick={() => handleDeleteWorker(confirmDeleteId)} className="flex-1 bg-red-600 text-white py-2.5 rounded-xl text-sm font-semibold">Remove</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Header */}
       <div className="mb-6 flex items-center justify-between gap-3">
@@ -450,9 +479,14 @@ export default function AdminPage() {
                   <button onClick={() => handleToggleAvailability(w.id)} className="flex items-center gap-1.5 text-sm font-medium">
                     {w.available ? <><ToggleRight className="w-7 h-7 text-[#007A4D]" /><span className="text-[#007A4D]">Available</span></> : <><ToggleLeft className="w-7 h-7 text-gray-400" /><span className="text-gray-400">Unavailable</span></>}
                   </button>
-                  <button onClick={() => setSelectedWorker(w)} className="flex items-center gap-1.5 text-sm text-orange-600 font-medium bg-orange-50 px-3 py-1.5 rounded-xl">
-                    <Eye className="w-4 h-4" /> View Profile
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setSelectedWorker(w)} className="flex items-center gap-1.5 text-sm text-orange-600 font-medium bg-orange-50 px-3 py-1.5 rounded-xl">
+                      <Eye className="w-4 h-4" /> View
+                    </button>
+                    <button onClick={() => setConfirmDeleteId(w.id)} className="flex items-center gap-1 text-xs text-red-500 border border-red-200 px-2.5 py-1.5 rounded-xl">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -482,7 +516,12 @@ export default function AdminPage() {
                     <td className="px-4 py-3"><span className={`text-xs px-2 py-1 rounded-full font-medium ${w.tier === "Top Rated" ? "bg-[#e8f5ef] text-[#007A4D]" : w.tier === "Verified" ? "bg-[#fffbea] text-[#b8860b]" : "bg-gray-100 text-gray-600"}`}>{w.tier}</span></td>
                     <td className="px-4 py-3">{w.idDocumentUrl ? <span className="text-xs bg-[#e8f5ef] text-[#007A4D] px-2 py-1 rounded-full font-medium">Uploaded</span> : <span className="text-xs bg-gray-100 text-gray-400 px-2 py-1 rounded-full">None</span>}</td>
                     <td className="px-4 py-3"><button onClick={() => handleToggleAvailability(w.id)} className="flex items-center gap-1.5 text-xs font-medium">{w.available ? <><ToggleRight className="w-6 h-6 text-[#007A4D]" /><span className="text-[#007A4D]">On</span></> : <><ToggleLeft className="w-6 h-6 text-gray-400" /><span className="text-gray-400">Off</span></>}</button></td>
-                    <td className="px-4 py-3"><button onClick={() => setSelectedWorker(w)} className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 font-medium"><Eye className="w-3.5 h-3.5" /> View</button></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setSelectedWorker(w)} className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 font-medium"><Eye className="w-3.5 h-3.5" /> View</button>
+                        <button onClick={() => setConfirmDeleteId(w.id)} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -538,8 +577,11 @@ export default function AdminPage() {
                 >
                   <UserX className="w-4 h-4" /> Reject
                 </button>
-                <button onClick={() => setSelectedWorker(w)} className="px-4 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium">
+                <button onClick={() => setSelectedWorker(w)} className="px-3 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium">
                   <Eye className="w-4 h-4" />
+                </button>
+                <button onClick={() => setConfirmDeleteId(w.id)} className="px-3 border border-red-200 text-red-400 py-2.5 rounded-xl text-sm font-medium">
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>

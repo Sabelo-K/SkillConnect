@@ -33,6 +33,10 @@ export async function POST(request: NextRequest) {
       workPhotos: [],
       tiktokUrl: body.tiktokUrl || undefined,
       available: true,
+      bankName: body.bankName || undefined,
+      accountNumber: body.accountNumber || undefined,
+      accountType: body.accountType || undefined,
+      branchCode: body.branchCode || undefined,
     });
     return NextResponse.json(worker, { status: 201 });
   } catch {

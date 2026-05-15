@@ -25,6 +25,10 @@ function toWorker(row: any): Worker {
     available: row.available,
     registeredAt: row.registered_at,
     status: row.status ?? "approved",
+    bankName: row.bank_name ?? undefined,
+    accountNumber: row.account_number ?? undefined,
+    accountType: row.account_type ?? undefined,
+    branchCode: row.branch_code ?? undefined,
   };
 }
 
@@ -56,6 +60,8 @@ function toJob(row: any): JobRequest {
     workerToken: row.worker_token ?? undefined,
     clientToken: row.client_token ?? undefined,
     timeline: row.timeline ?? [],
+    paymentStatus: row.payment_status ?? undefined,
+    paymentId: row.payment_id ?? undefined,
   };
 }
 
@@ -106,6 +112,10 @@ export async function addWorker(
       work_photos: worker.workPhotos,
       tiktok_url: worker.tiktokUrl ?? null,
       available: worker.available,
+      bank_name: worker.bankName ?? null,
+      account_number: worker.accountNumber ?? null,
+      account_type: worker.accountType ?? null,
+      branch_code: worker.branchCode ?? null,
       rating: 0,
       review_count: 0,
       tier: "New",
@@ -307,6 +317,61 @@ export async function confirmCompletion(jobId: string): Promise<JobRequest | nul
   const result = await completeJob(jobId, job.quotedAmount ?? 0, job.commissionRate);
   await appendTimeline(jobId, { at: new Date().toISOString(), event: "completion_confirmed", by: "client" });
   return result;
+}
+
+export async function markPaymentPending(jobId: string): Promise<JobRequest | null> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ status: "payment_pending", payment_status: "pending" })
+    .eq("id", jobId)
+    .eq("status", "completion_requested")
+    .select()
+    .single();
+  if (error) return null;
+  await appendTimeline(jobId, { at: new Date().toISOString(), event: "payment_initiated", by: "client" });
+  return toJob(data);
+}
+
+export async function markPaymentReceived(jobId: string, paymentId: string): Promise<JobRequest | null> {
+  const job = await getJobById(jobId);
+  if (!job) return null;
+  const quotedAmount = job.quotedAmount ?? 0;
+  const commissionAmount = Math.round(quotedAmount * (job.commissionRate / 100));
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({
+      status: "completed",
+      payment_status: "received",
+      payment_id: paymentId,
+      completed_at: new Date().toISOString().split("T")[0],
+      job_value: quotedAmount,
+      commission_amount: commissionAmount,
+      commission_status: "awaiting",
+    })
+    .eq("id", jobId)
+    .select()
+    .single();
+  if (error) return null;
+  if (data.matched_worker_id) {
+    const worker = await getWorkerById(data.matched_worker_id);
+    if (worker) {
+      await supabase.from("workers").update({ jobs_completed: worker.jobsCompleted + 1 }).eq("id", data.matched_worker_id);
+    }
+  }
+  await appendTimeline(jobId, { at: new Date().toISOString(), event: "payment_received", by: "system", note: `PayFast ref: ${paymentId}` });
+  return toJob(data);
+}
+
+export async function markWorkerPaid(jobId: string): Promise<JobRequest | null> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ payment_status: "settled", commission_status: "paid" })
+    .eq("id", jobId)
+    .select()
+    .single();
+  if (error) return null;
+  await appendTimeline(jobId, { at: new Date().toISOString(), event: "worker_paid", by: "admin" });
+  return toJob(data);
 }
 
 export async function raiseDispute(jobId: string, reason: string): Promise<JobRequest | null> {

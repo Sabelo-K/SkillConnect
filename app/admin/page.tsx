@@ -205,6 +205,56 @@ function DisputeModal({ job, workers, onClose, onResolve }: { job: JobRequest; w
   );
 }
 
+// ── Pay worker modal ────────────────────────────────────────────────────────
+function PayWorkerModal({ job, worker, onClose, onConfirm }: { job: JobRequest; worker: Worker | undefined; onClose: () => void; onConfirm: () => void }) {
+  const [confirmed, setConfirmed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const workerPayout = (job.quotedAmount ?? 0) - (job.commissionAmount ?? 0);
+  useEffect(() => { document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2"><CircleDollarSign className="w-5 h-5 text-[#007A4D]" /><h2 className="text-lg font-bold text-gray-900">Pay Worker</h2></div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          {/* Breakdown */}
+          <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-gray-500">Client paid (via PayFast)</span><span className="font-semibold text-gray-900">R {(job.quotedAmount ?? 0).toLocaleString()}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">SkillConnect commission ({job.commissionRate}%)</span><span className="font-semibold text-orange-600">− R {(job.commissionAmount ?? 0).toLocaleString()}</span></div>
+            <div className="border-t border-gray-200 pt-2 flex justify-between"><span className="font-semibold text-gray-800">EFT to worker</span><span className="font-bold text-[#007A4D] text-base">R {workerPayout.toLocaleString()}</span></div>
+          </div>
+          {/* Worker bank details */}
+          {worker && (
+            <div className="bg-[#f0f7f4] rounded-xl p-4 space-y-2 text-sm">
+              <p className="font-semibold text-[#007A4D] text-xs uppercase tracking-wide mb-2">Worker bank details</p>
+              <div className="flex justify-between"><span className="text-gray-500">Name</span><span className="font-medium text-gray-900">{worker.name}</span></div>
+              {worker.bankName ? <>
+                <div className="flex justify-between"><span className="text-gray-500">Bank</span><span className="font-medium text-gray-900">{worker.bankName}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Account</span><span className="font-mono font-medium text-gray-900">{worker.accountNumber}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="font-medium text-gray-900 capitalize">{worker.accountType}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Branch code</span><span className="font-mono font-medium text-gray-900">{worker.branchCode}</span></div>
+              </> : (
+                <p className="text-orange-600 text-xs">No bank details on file. Contact worker via WhatsApp.</p>
+              )}
+              <a href={`https://wa.me/${worker.phone.replace(/\s+/g, "").replace(/^\+/, "")}?text=${encodeURIComponent(`Hi ${worker.name} 👋\n\nYour SkillConnect payment of R${workerPayout.toLocaleString()} is being processed via EFT to your bank account. Please allow 1-2 business days.`)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs bg-[#007A4D] text-white px-3 py-2 rounded-xl font-medium w-fit mt-2"><MessageCircle className="w-3.5 h-3.5" /> Notify worker via WhatsApp</a>
+            </div>
+          )}
+          <label className="flex items-start gap-3 cursor-pointer bg-orange-50 rounded-xl p-3">
+            <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-0.5 w-4 h-4 accent-orange-600 flex-shrink-0" />
+            <span className="text-sm text-gray-700">I have transferred <strong>R {workerPayout.toLocaleString()}</strong> to {worker?.name ?? "the worker"}&apos;s bank account</span>
+          </label>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 py-3 rounded-xl text-sm font-medium">Cancel</button>
+            <button disabled={!confirmed || saving} onClick={async () => { setSaving(true); await onConfirm(); setSaving(false); }} className="flex-1 bg-[#007A4D] text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-60">{saving ? "Saving..." : "Confirm Payment"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main admin page ──────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("jobs");
@@ -217,6 +267,7 @@ export default function AdminPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [jobLinks, setJobLinks] = useState<{ jobId: string; workerToken: string; clientToken: string } | null>(null);
   const [resolvingDispute, setResolvingDispute] = useState<JobRequest | null>(null);
+  const [payingWorkerJob, setPayingWorkerJob] = useState<JobRequest | null>(null);
   const router = useRouter();
 
   const refreshData = useCallback(() =>
@@ -253,6 +304,7 @@ export default function AdminPage() {
     await refreshData();
   };
   const handleMarkCommissionPaid = async (jobId: string) => { await fetch(`/api/jobs/${jobId}/commission`, { method: "POST" }); await refreshData(); };
+  const handleMarkWorkerPaid = async (jobId: string) => { await fetch(`/api/jobs/${jobId}/mark-worker-paid`, { method: "POST" }); setPayingWorkerJob(null); await refreshData(); };
   const handleCompleteJobDone = async () => { setCompletingJob(null); await refreshData(); };
   const handleToggleAvailability = async (workerId: string) => { await fetch(`/api/workers/${workerId}/availability`, { method: "POST" }); await refreshData(); };
 
@@ -284,13 +336,14 @@ export default function AdminPage() {
   const totalCollected = completedJobs.filter((j) => j.commissionStatus === "paid").reduce((s, j) => s + (j.commissionAmount ?? 0), 0);
   const totalOutstanding = completedJobs.filter((j) => j.commissionStatus === "awaiting").reduce((s, j) => s + (j.commissionAmount ?? 0), 0);
 
-  const statusColor: Record<JobRequest["status"], string> = { pending: "bg-[#fffbea] text-[#b8860b]", matched: "bg-[#eef1fb] text-[#002395]", quoted: "bg-[#eef1fb] text-[#5a2d82]", accepted: "bg-[#eef1fb] text-[#003580]", completion_requested: "bg-[#fffbea] text-[#b8860b]", completed: "bg-[#e8f5ef] text-[#007A4D]", disputed: "bg-[#fde8e8] text-[#c0392b]", cancelled: "bg-gray-100 text-gray-500" };
+  const statusColor: Record<JobRequest["status"], string> = { pending: "bg-[#fffbea] text-[#b8860b]", matched: "bg-[#eef1fb] text-[#002395]", quoted: "bg-[#eef1fb] text-[#5a2d82]", accepted: "bg-[#eef1fb] text-[#003580]", completion_requested: "bg-[#fffbea] text-[#b8860b]", payment_pending: "bg-blue-100 text-blue-700", completed: "bg-[#e8f5ef] text-[#007A4D]", disputed: "bg-[#fde8e8] text-[#c0392b]", cancelled: "bg-gray-100 text-gray-500" };
   const commissionColor: Record<JobRequest["commissionStatus"], string> = { none: "bg-gray-100 text-gray-400", awaiting: "bg-[#fffbea] text-[#b8860b]", paid: "bg-[#e8f5ef] text-[#007A4D]" };
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
       {selectedWorker && <WorkerModal worker={selectedWorker} onClose={() => setSelectedWorker(null)} />}
       {completingJob && <CompleteJobModal job={completingJob} workers={workers} onClose={() => setCompletingJob(null)} onDone={handleCompleteJobDone} />}
+      {payingWorkerJob && <PayWorkerModal job={payingWorkerJob} worker={workers.find((w) => w.id === payingWorkerJob.matchedWorkerId)} onClose={() => setPayingWorkerJob(null)} onConfirm={() => handleMarkWorkerPaid(payingWorkerJob.id)} />}
 
       {/* Accountability links modal */}
       {jobLinks && (
@@ -511,6 +564,45 @@ export default function AdminPage() {
             ))}
           </div>
 
+          {/* Payout queue — jobs paid by client via PayFast, awaiting worker EFT */}
+          {(() => {
+            const payoutQueue = completedJobs.filter((j) => j.paymentStatus === "received");
+            if (payoutQueue.length === 0) return null;
+            return (
+              <div className="bg-[#f0f7f4] border border-[#007A4D]/20 rounded-2xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <CircleDollarSign className="w-4 h-4 text-[#007A4D]" />
+                  <h3 className="font-semibold text-[#007A4D] text-sm">Payout queue — pay these workers</h3>
+                  <span className="bg-[#007A4D] text-white text-xs font-bold px-2 py-0.5 rounded-full">{payoutQueue.length}</span>
+                </div>
+                <div className="space-y-3">
+                  {payoutQueue.map((j) => {
+                    const w = workers.find((x) => x.id === j.matchedWorkerId);
+                    const payout = (j.quotedAmount ?? 0) - (j.commissionAmount ?? 0);
+                    return (
+                      <div key={j.id} className="bg-white rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">{w?.name ?? "Unknown worker"}</p>
+                          <p className="text-xs text-gray-500">{j.clientName} · {j.trade}</p>
+                          {w?.bankName ? (
+                            <p className="text-xs text-gray-400 mt-0.5 font-mono">{w.bankName} · {w.accountNumber}</p>
+                          ) : (
+                            <p className="text-xs text-orange-500 mt-0.5">No bank details on file</p>
+                          )}
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-lg font-bold text-[#007A4D]">R {payout.toLocaleString()}</p>
+                          <p className="text-xs text-gray-400">Commission: R {(j.commissionAmount ?? 0).toLocaleString()}</p>
+                          <button onClick={() => setPayingWorkerJob(j)} className="mt-2 text-xs bg-[#007A4D] text-white px-3 py-1.5 rounded-lg font-medium">Pay Worker</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Mobile cards */}
           <div className="space-y-3 sm:hidden">
             {completedJobs.length === 0 && <p className="text-center py-10 text-gray-400 text-sm">No completed jobs yet.</p>}
@@ -538,7 +630,13 @@ export default function AdminPage() {
                       <p className="font-bold text-orange-600">R {j.commissionAmount?.toLocaleString() ?? "—"}</p>
                     </div>
                   </div>
-                  {j.commissionStatus === "awaiting" && (
+                  {j.paymentStatus === "received" && (
+                    <button onClick={() => setPayingWorkerJob(j)} className="w-full bg-[#007A4D] text-white py-2.5 rounded-xl text-sm font-semibold">Pay Worker</button>
+                  )}
+                  {j.paymentStatus === "settled" && (
+                    <p className="text-xs text-[#007A4D] font-medium">Worker paid ✓</p>
+                  )}
+                  {(!j.paymentStatus || j.paymentStatus === "none") && j.commissionStatus === "awaiting" && (
                     <button onClick={() => handleMarkCommissionPaid(j.id)} className="w-full bg-[#007A4D] text-white py-2.5 rounded-xl text-sm font-semibold">Mark as Paid</button>
                   )}
                 </div>
@@ -568,7 +666,12 @@ export default function AdminPage() {
                       <td className="px-4 py-3 font-medium text-gray-900">R {j.jobValue?.toLocaleString() ?? "—"}</td>
                       <td className="px-4 py-3"><p className="font-bold text-orange-600">R {j.commissionAmount?.toLocaleString() ?? "—"}</p><p className="text-xs text-gray-400">{j.commissionRate}%</p></td>
                       <td className="px-4 py-3"><span className={`text-xs px-2 py-1 rounded-full font-medium ${commissionColor[j.commissionStatus]}`}>{j.commissionStatus === "awaiting" ? "Awaiting" : j.commissionStatus === "paid" ? "Paid ✓" : "—"}</span></td>
-                      <td className="px-4 py-3">{j.commissionStatus === "awaiting" && <button onClick={() => handleMarkCommissionPaid(j.id)} className="text-xs bg-[#007A4D] text-white px-3 py-1.5 rounded-lg font-medium">Mark Paid</button>}{j.commissionStatus === "paid" && <span className="text-xs text-gray-400">Done</span>}</td>
+                      <td className="px-4 py-3">
+                        {j.paymentStatus === "received" && <button onClick={() => setPayingWorkerJob(j)} className="text-xs bg-[#007A4D] text-white px-3 py-1.5 rounded-lg font-medium">Pay Worker</button>}
+                        {j.paymentStatus === "settled" && <span className="text-xs text-[#007A4D] font-medium">Worker paid ✓</span>}
+                        {(!j.paymentStatus || j.paymentStatus === "none") && j.commissionStatus === "awaiting" && <button onClick={() => handleMarkCommissionPaid(j.id)} className="text-xs bg-[#007A4D] text-white px-3 py-1.5 rounded-lg font-medium">Mark Paid</button>}
+                        {(!j.paymentStatus || j.paymentStatus === "none") && j.commissionStatus === "paid" && <span className="text-xs text-gray-400">Done</span>}
+                      </td>
                     </tr>
                   );
                 })}

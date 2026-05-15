@@ -136,7 +136,7 @@ export default function ClientPortalPage({
   const [acceptError, setAcceptError] = useState("");
   const [showDeclineNote, setShowDeclineNote] = useState(false);
 
-  const [confirmingCompletion, setConfirmingCompletion] = useState(false);
+  const [initiatingPayment, setInitiatingPayment] = useState(false);
   const [confirmError, setConfirmError] = useState("");
   const [showDisputeForm, setShowDisputeForm] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
@@ -191,24 +191,35 @@ export default function ClientPortalPage({
     }
   }
 
-  async function confirmCompletion() {
+  async function initiatePayment() {
     if (!job) return;
-    setConfirmingCompletion(true);
+    setInitiatingPayment(true);
     setConfirmError("");
     try {
-      const res = await fetch(`/api/jobs/${job.id}/confirm-completion`, {
+      const res = await fetch(`/api/jobs/${job.id}/initiate-payment`, {
         method: "POST",
       });
       if (!res.ok) {
-        setConfirmError("Failed to confirm. Please try again.");
+        setConfirmError("Failed to initiate payment. Please try again.");
         return;
       }
-      const updated = await res.json();
-      setJob(updated);
+      const { payfastUrl, paymentData } = await res.json();
+      // Auto-submit a form to PayFast
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = payfastUrl;
+      for (const [key, value] of Object.entries(paymentData)) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value);
+        form.appendChild(input);
+      }
+      document.body.appendChild(form);
+      form.submit();
     } catch {
       setConfirmError("Network error. Please try again.");
-    } finally {
-      setConfirmingCompletion(false);
+      setInitiatingPayment(false);
     }
   }
 
@@ -450,14 +461,21 @@ export default function ClientPortalPage({
             )}
             {!showDisputeForm && (
               <div className="space-y-2">
+                {job.quotedAmount && (
+                  <div className="bg-[#007A4D]/10 rounded-xl p-3 text-center mb-2">
+                    <p className="text-xs text-[#007A4D] font-semibold uppercase tracking-wide mb-0.5">Amount due</p>
+                    <p className="text-2xl font-bold text-[#007A4D]">R{job.quotedAmount.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Secure payment via PayFast</p>
+                  </div>
+                )}
                 <button
-                  onClick={confirmCompletion}
-                  disabled={confirmingCompletion}
+                  onClick={initiatePayment}
+                  disabled={initiatingPayment}
                   className="w-full bg-[#007A4D] hover:bg-[#006040] disabled:bg-green-300 text-white font-semibold py-3 rounded-lg transition-colors"
                 >
-                  {confirmingCompletion
-                    ? "Confirming…"
-                    : "Confirm — Work was completed ✓"}
+                  {initiatingPayment
+                    ? "Redirecting to payment…"
+                    : "Confirm & Pay ✓"}
                 </button>
                 <button
                   type="button"
@@ -499,6 +517,19 @@ export default function ClientPortalPage({
                 </div>
               </form>
             )}
+          </div>
+        )}
+
+        {job.status === "payment_pending" && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-blue-600 text-xl">⏳</span>
+              <h2 className="text-base font-semibold text-blue-800">Payment processing</h2>
+            </div>
+            <p className="text-sm text-blue-700">
+              Your payment is being processed. This page will update once it&apos;s confirmed.
+              If you paid successfully, you can close this page — we&apos;ll notify you via WhatsApp.
+            </p>
           </div>
         )}
 

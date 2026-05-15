@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
-import { CheckCircle, ArrowLeft, HardHat, Camera, IdCard, Upload } from "lucide-react";
+import { CheckCircle, ArrowLeft, HardHat, Camera, IdCard, Upload, Landmark } from "lucide-react";
 import Link from "next/link";
 import { TRADES } from "@/lib/store";
 import { Worker } from "@/lib/types";
@@ -116,6 +116,17 @@ function ImageUpload({ label, hint, icon, preview, accept, onFile }: ImageUpload
   );
 }
 
+const SA_BANKS = [
+  { name: "Absa Bank", branchCode: "632005" },
+  { name: "African Bank", branchCode: "430000" },
+  { name: "Capitec Bank", branchCode: "470010" },
+  { name: "FNB (First National Bank)", branchCode: "250655" },
+  { name: "Investec Bank", branchCode: "580105" },
+  { name: "Nedbank", branchCode: "198765" },
+  { name: "Standard Bank", branchCode: "051001" },
+  { name: "TymeBank", branchCode: "678910" },
+];
+
 export default function RegisterPage() {
   const [form, setForm] = useState({
     name: "",
@@ -126,6 +137,10 @@ export default function RegisterPage() {
     yearsExperience: "",
     bio: "",
     tiktokUrl: "",
+    bankName: "",
+    accountNumber: "",
+    accountType: "current" as "current" | "savings",
+    branchCode: "",
   });
   const [selfie, setSelfie] = useState("");
   const [idDocument, setIdDocument] = useState("");
@@ -145,7 +160,11 @@ export default function RegisterPage() {
       const res = await fetch("/api/workers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, photoUrl: selfie, idDocumentUrl: idDocument }),
+        body: JSON.stringify({
+        ...form,
+        photoUrl: selfie,
+        idDocumentUrl: idDocument,
+      }),
       });
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
@@ -338,6 +357,57 @@ export default function RegisterPage() {
             />
           </div>
           <p className="text-xs text-gray-400 mt-1">Share videos of your work so clients can see your quality before booking.</p>
+        </div>
+
+        {/* Banking details */}
+        <div className="border-t border-gray-100 pt-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Landmark className="w-4 h-4 text-orange-600" />
+            <h3 className="text-sm font-semibold text-gray-800">Banking details <span className="text-gray-400 font-normal">(for job payouts)</span></h3>
+          </div>
+          <p className="text-xs text-gray-400 mb-4">We pay you directly via EFT after each job. Your details are stored securely and never shared with clients.</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bank name</label>
+              <select
+                value={form.bankName}
+                onChange={(e) => {
+                  const bank = SA_BANKS.find((b) => b.name === e.target.value);
+                  setForm({ ...form, bankName: e.target.value, branchCode: bank?.branchCode ?? "" });
+                }}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                <option value="">Select your bank...</option>
+                {SA_BANKS.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Account number</label>
+                <input
+                  type="text"
+                  value={form.accountNumber}
+                  onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
+                  placeholder="e.g. 1234567890"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Account type</label>
+                <select
+                  value={form.accountType}
+                  onChange={(e) => setForm({ ...form, accountType: e.target.value as "current" | "savings" })}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                >
+                  <option value="current">Current / Cheque</option>
+                  <option value="savings">Savings</option>
+                </select>
+              </div>
+            </div>
+            {form.branchCode && (
+              <p className="text-xs text-gray-400">Branch code: <span className="font-mono font-medium text-gray-600">{form.branchCode}</span> (auto-filled)</p>
+            )}
+          </div>
         </div>
 
         {/* POPIA consent */}

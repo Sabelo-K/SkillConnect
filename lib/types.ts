@@ -30,6 +30,11 @@ export interface Worker {
   available: boolean;
   registeredAt: string;
   status: "pending" | "approved" | "rejected";
+  // Banking details for EFT payout
+  bankName?: string;
+  accountNumber?: string;
+  accountType?: "current" | "savings";
+  branchCode?: string;
 }
 
 export interface Review {
@@ -57,7 +62,7 @@ export interface JobRequest {
   ward: string;
   area: string;
   description: string;
-  status: "pending" | "matched" | "quoted" | "accepted" | "completion_requested" | "completed" | "disputed" | "cancelled";
+  status: "pending" | "matched" | "quoted" | "accepted" | "completion_requested" | "payment_pending" | "completed" | "disputed" | "cancelled";
   matchedWorkerId?: string;
   createdAt: string;
   completedAt?: string;
@@ -75,4 +80,6 @@ export interface JobRequest {
   workerToken?: string;
   clientToken?: string;
   timeline?: TimelineEvent[];
+  paymentStatus?: "none" | "pending" | "received" | "settled";
+  paymentId?: string;
 }

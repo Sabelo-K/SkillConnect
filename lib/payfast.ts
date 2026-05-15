@@ -30,19 +30,26 @@ export function generateSignature(
 }
 
 export function buildPaymentData(
-  job: { id: string; clientName: string; quotedAmount: number; trade: string },
+  job: { id: string; clientName: string; quotedAmount: number; trade: string; clientToken?: string },
   baseUrl: string
 ): Record<string, string> {
   const parts = job.clientName.trim().split(" ");
   const firstName = parts[0];
   const lastName = parts.slice(1).join(" ") || firstName;
 
+  const returnParams = job.clientToken
+    ? `clientToken=${job.clientToken}`
+    : `jobId=${job.id}`;
+  const cancelParams = job.clientToken
+    ? `clientToken=${job.clientToken}`
+    : `jobId=${job.id}`;
+
   // Parameter order must match what we include — PayFast is order-sensitive
   const data: Record<string, string> = {
     merchant_id: PAYFAST_MERCHANT_ID,
     merchant_key: PAYFAST_MERCHANT_KEY,
-    return_url: `${baseUrl}/job/payment/success?jobId=${job.id}`,
-    cancel_url: `${baseUrl}/job/payment/cancel?jobId=${job.id}`,
+    return_url: `${baseUrl}/job/payment/success?${returnParams}`,
+    cancel_url: `${baseUrl}/job/payment/cancel?${cancelParams}`,
     notify_url: `${baseUrl}/api/payfast/notify`,
     m_payment_id: job.id,
     amount: job.quotedAmount.toFixed(2),

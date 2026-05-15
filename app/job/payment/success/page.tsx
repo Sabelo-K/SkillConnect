@@ -5,7 +5,9 @@ import Link from "next/link";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
+  const clientToken = searchParams.get("clientToken");
   const jobId = searchParams.get("jobId");
+  const portalHref = clientToken ? `/job/client/${clientToken}` : jobId ? `/job/client/${jobId}` : null;
 
   return (
     <div className="min-h-screen bg-green-50 flex items-center justify-center px-4">
@@ -26,9 +28,9 @@ function SuccessContent() {
             small commission. The worker will be notified.
           </p>
         </div>
-        {jobId && (
+        {portalHref && (
           <Link
-            href={`/job/client/${jobId}`}
+            href={portalHref}
             className="block w-full bg-[#007A4D] text-white font-semibold py-3 rounded-xl text-sm hover:bg-[#006040] transition-colors mb-3"
           >
             Back to your job portal

@@ -5,7 +5,9 @@ import Link from "next/link";
 
 function CancelContent() {
   const searchParams = useSearchParams();
+  const clientToken = searchParams.get("clientToken");
   const jobId = searchParams.get("jobId");
+  const portalHref = clientToken ? `/job/client/${clientToken}` : jobId ? `/job/client/${jobId}` : null;
 
   return (
     <div className="min-h-screen bg-orange-50 flex items-center justify-center px-4">
@@ -22,9 +24,9 @@ function CancelContent() {
           If you&apos;re having trouble paying, please contact us on WhatsApp
           and we&apos;ll help you sort it out.
         </p>
-        {jobId && (
+        {portalHref && (
           <Link
-            href={`/job/client/${jobId}`}
+            href={portalHref}
             className="block w-full bg-orange-600 text-white font-semibold py-3 rounded-xl text-sm hover:bg-orange-700 transition-colors mb-3"
           >
             Back to your job portal

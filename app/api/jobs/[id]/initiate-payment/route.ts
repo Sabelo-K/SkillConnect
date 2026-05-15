@@ -22,7 +22,7 @@ export async function POST(
     req.nextUrl.origin;
 
   const paymentData = buildPaymentData(
-    { id: job.id, clientName: job.clientName, quotedAmount: job.quotedAmount, trade: job.trade },
+    { id: job.id, clientName: job.clientName, quotedAmount: job.quotedAmount, trade: job.trade, clientToken: job.clientToken },
     baseUrl
   );
 
